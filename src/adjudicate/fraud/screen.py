@@ -1,6 +1,6 @@
 """Signals computed from CDRs only. Dispute text is deliberately not an input.
 
-Thresholds are starting values and must be tuned on one world seed and reported on another.
+Thresholds are tuned on one world seed and reported on another.
 Passing the near-twin cases matters as much as catching fraud: escalating every international
 dispute would otherwise score perfectly.
 """
@@ -21,13 +21,14 @@ INTERNATIONAL = {"international", "premium", "roaming"}
 @dataclass(frozen=True)
 class Thresholds:
     high_risk_prefixes: tuple[str, ...] = ("+882", "+881", "+979")
-    high_risk_strong_calls: int = 5
-    spike_strong_multiple: int = 8
+    # Chosen by evals/fraud_eval.py on seed 11 and reported on seed 23. See the summary it writes.
+    high_risk_strong_calls: int = 3
+    spike_strong_multiple: int = 12
     spike_weak_multiple: int = 3
     spike_min_minutes: int = 45
     off_hours: tuple[int, int] = (0, 5)
-    off_hours_burst_calls: int = 10
-    sequential_run: int = 5
+    off_hours_burst_calls: int = 15
+    sequential_run: int = 8
     wangiri_callbacks: int = 3
     overlap_strong: int = 3
 

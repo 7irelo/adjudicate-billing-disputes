@@ -6,4 +6,4 @@
 
 **Known limit.** The low-and-slow pattern is built to stay under the thresholds, and a test records that it does. Such a case can reach the model. Its protection there is the customer's denial leading to `needs_review`, plus the hard rule that any fraud-scenario case reaching auto-credit fails the build.
 
-**Thresholds are starting values.** They need tuning on one world seed and reporting on another, because a screen that catches everything has been tuned to its own generator.
+**Thresholds** are chosen by `evals/fraud_eval.py` on one seed and reported on another, because a screen that catches everything has been tuned to its own generator. These are synthetic patterns, so the numbers say nothing about real fraud.
