@@ -74,7 +74,7 @@ The plan asks for red builds on deliberate regression branches. That's still ope
 
 Commit `cc90efb` and its docs: 520 tests pass (encoder smoke left out), `ruff` and `pyright` clean, 7 of 7 mutations caught, oracle gate passes on 100 dev and 50 held-out cases, constant model fails. With records hidden, oracle record recall falls to about 3%, so the record pipeline does carry the evidence.
 
-**The Docker stack hasn't been rebuilt since the follow-up loop, rewriting and calibrator went in,** because memory was short. Rebuild with `docker compose up --build`. It also hasn't been tested from a fresh clone.
+**The Docker stack hasn't been rebuilt since the follow-up loop, rewriting and calibrator went in,** and the fresh-clone test didn't finish: Windows ran low on memory and Claude Code stopped it, with no result either way. Rerun with plenty of memory free: clone the repo, then `docker compose up --build`.
 
 ## What was stopped
 
