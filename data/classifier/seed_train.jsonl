@@ -1,0 +1,71 @@
+{"text": "I was charged for roaming in Botswana but I never turned roaming on", "type": "roaming", "urgency": "routine"}
+{"text": "My bill has R900 of roaming from my trip to Namibia, I didn't activate it", "type": "roaming", "urgency": "soon"}
+{"text": "Why am I paying roaming fees when I was in Maputo for only two days", "type": "roaming", "urgency": "routine"}
+{"text": "came back from holiday in Mauritius and the roaming charges are huge, nobody warned me", "type": "roaming", "urgency": "soon"}
+{"text": "Roaming usage on my invoice but my phone was on flight mode the whole trip", "type": "roaming", "urgency": "routine"}
+{"text": "they billed me overseas data and call rates while I was in Lesotho, debit order runs Friday", "type": "roaming", "urgency": "urgent"}
+{"text": "Please explain the roaming line on my May statement", "type": "roaming", "urgency": "routine"}
+{"text": "I activated roaming for the UK but the rate I was billed is not the one you quoted", "type": "roaming", "urgency": "routine"}
+{"text": "Roaming charge of R2,400 and my account will be suspended if I don't pay it", "type": "roaming", "urgency": "urgent"}
+{"text": "my company phone shows roaming in Zambia, the employee never left Joburg", "type": "roaming", "urgency": "soon"}
+{"text": "The international call rate on my bill is higher than the tariff guide", "type": "international", "urgency": "routine"}
+{"text": "I phone my mother in Harare every week and this month the international calls cost double", "type": "international", "urgency": "soon"}
+{"text": "International charges look too high, you billed R5 a minute and the guide says less", "type": "international", "urgency": "routine"}
+{"text": "Why did my calls to London cost so much this month", "type": "international", "urgency": "routine"}
+{"text": "you changed the rate for calls to India without telling me", "type": "international", "urgency": "routine"}
+{"text": "Calls to the US on our trunk were charged above our contracted rate", "type": "international", "urgency": "soon"}
+{"text": "I want a breakdown of the overseas calls on my account, the total seems wrong", "type": "international", "urgency": "routine"}
+{"text": "my international bill jumped to R1,500 and I only made a few calls, nothing unusual on my side", "type": "international", "urgency": "soon"}
+{"text": "Billed for calls to Zimbabwe at the old price, which is wrong", "type": "international", "urgency": "routine"}
+{"text": "This is about the rate per minute for international calls on my contract", "type": "international", "urgency": "routine"}
+{"text": "I cancelled my contract in March and you are still charging me", "type": "cancellation", "urgency": "soon"}
+{"text": "You charged me after I cancelled, please refund", "type": "cancellation", "urgency": "soon"}
+{"text": "My contract ended but the debit order still went off this month", "type": "cancellation", "urgency": "urgent"}
+{"text": "I gave notice to terminate and I am still being billed the monthly fee", "type": "cancellation", "urgency": "soon"}
+{"text": "Why is there a cancellation penalty on my account, I gave proper notice", "type": "cancellation", "urgency": "routine"}
+{"text": "cancelled in april, still got an invoice for may and june", "type": "cancellation", "urgency": "soon"}
+{"text": "We terminated our PBX service and the invoice keeps coming", "type": "cancellation", "urgency": "soon"}
+{"text": "I closed this account months ago and now a debt collector is calling me about it", "type": "cancellation", "urgency": "critical"}
+{"text": "they say my notice period wasn't over but I asked to cancel weeks ago", "type": "cancellation", "urgency": "routine"}
+{"text": "You should have stopped billing when I cancelled, the May fee is not owed", "type": "cancellation", "urgency": "routine"}
+{"text": "My monthly fee is on the invoice twice", "type": "double_billing", "urgency": "routine"}
+{"text": "I was billed two times for May", "type": "double_billing", "urgency": "soon"}
+{"text": "Same charge appears twice on my statement, please fix it", "type": "double_billing", "urgency": "routine"}
+{"text": "you debited me twice for the same month", "type": "double_billing", "urgency": "urgent"}
+{"text": "There is a duplicate line on the invoice for my subscription", "type": "double_billing", "urgency": "routine"}
+{"text": "Double charged again, this is the same fee as the line above it", "type": "double_billing", "urgency": "routine"}
+{"text": "Our trunk fee has been billed twice on this month's invoice", "type": "double_billing", "urgency": "soon"}
+{"text": "I see R299 two times, I only have one contract", "type": "double_billing", "urgency": "routine"}
+{"text": "the same amount came off my account twice and now I can't afford rent", "type": "double_billing", "urgency": "urgent"}
+{"text": "April and May look identical, am I being charged twice for one service", "type": "double_billing", "urgency": "routine"}
+{"text": "I got out of bundle charges but I never opted in", "type": "out_of_bundle", "urgency": "routine"}
+{"text": "My bundle finished and you kept charging me per minute without asking", "type": "out_of_bundle", "urgency": "soon"}
+{"text": "Why am I paying out-of-bundle rates, I never agreed to that", "type": "out_of_bundle", "urgency": "routine"}
+{"text": "no SMS to say my minutes ran out and now there's an extra charge", "type": "out_of_bundle", "urgency": "routine"}
+{"text": "Airtime was eaten after my bundle ended, I did not consent to out of bundle", "type": "out_of_bundle", "urgency": "soon"}
+{"text": "My allowance ran out and I was billed for extra minutes", "type": "out_of_bundle", "urgency": "routine"}
+{"text": "We went over our included minutes and the overage looks wrong", "type": "out_of_bundle", "urgency": "routine"}
+{"text": "out of bundle usage R125 on my bill, please reverse it", "type": "out_of_bundle", "urgency": "routine"}
+{"text": "you charged me for Keep Talking but I never chose that option", "type": "out_of_bundle", "urgency": "routine"}
+{"text": "my bundle depleted, you never told me, and the charge is due on Friday", "type": "out_of_bundle", "urgency": "urgent"}
+{"text": "I was billed R1,200 for international calls I never made", "type": "suspected_fraud", "urgency": "urgent"}
+{"text": "Someone is using my number, there are calls at 2am to places I don't know", "type": "suspected_fraud", "urgency": "critical"}
+{"text": "Our PBX was hacked over the weekend and there are thousands in calls", "type": "suspected_fraud", "urgency": "critical"}
+{"text": "these calls are not mine, I've never phoned that country", "type": "suspected_fraud", "urgency": "urgent"}
+{"text": "I think my SIM has been cloned, the bill is full of strange numbers", "type": "suspected_fraud", "urgency": "critical"}
+{"text": "I got a missed call from abroad, called back and now there is a huge charge", "type": "suspected_fraud", "urgency": "urgent"}
+{"text": "Fraud on my account, please stop these calls now", "type": "suspected_fraud", "urgency": "critical"}
+{"text": "unauthorised calls on our trunk overnight, nobody was in the office", "type": "suspected_fraud", "urgency": "critical"}
+{"text": "I don't recognise any of the numbers on this international list", "type": "suspected_fraud", "urgency": "urgent"}
+{"text": "My phone was stolen last week and calls were made after that", "type": "suspected_fraud", "urgency": "critical"}
+{"text": "I never made these calls but I'm not sure how they happened", "type": "suspected_fraud", "urgency": "soon"}
+{"text": "Why is my invoice late this month", "type": "other", "urgency": "routine"}
+{"text": "Please change my billing address", "type": "other", "urgency": "routine"}
+{"text": "I don't understand the VAT line on my statement", "type": "other", "urgency": "routine"}
+{"text": "Can you send me a copy of my last invoice", "type": "other", "urgency": "routine"}
+{"text": "My payment isn't showing on the account", "type": "other", "urgency": "soon"}
+{"text": "My service was suspended even though I paid", "type": "other", "urgency": "critical"}
+{"text": "you sent my account to collections by mistake", "type": "other", "urgency": "critical"}
+{"text": "Is there a discount for paying early", "type": "other", "urgency": "routine"}
+{"text": "My debit order date changed without notice", "type": "other", "urgency": "soon"}
+{"text": "The name on my invoice is spelled wrong", "type": "other", "urgency": "routine"}
