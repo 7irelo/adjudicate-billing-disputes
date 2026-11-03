@@ -16,7 +16,7 @@ from adjudicate.credit.rules import load_policy
 from adjudicate.db import TenantPool
 from adjudicate.fraud.screen import screen
 from adjudicate.records import queries
-from adjudicate.retrieval import pipeline
+from adjudicate.retrieval import expansion, pipeline
 from adjudicate.schemas import Classification, Clause, CreditComputation, EvidenceSet, FraudScreen
 
 
@@ -83,6 +83,7 @@ class ToolService:
     def search_clauses(self, query: str, k: int = 8, as_of: date | None = None) -> list[dict]:
         with self._conn() as conn:
             hits = pipeline.search_clauses(conn, self.tenant_id, query, k=k, as_of=as_of)
+            hits = expansion.with_definitions(conn, hits)
         return [h.model_dump(mode="json") for h in hits]
 
     def get_clause(self, clause_id: str) -> Clause | None:

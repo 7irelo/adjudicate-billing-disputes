@@ -12,6 +12,7 @@ from typing import Any, Protocol
 import bm25s
 
 from adjudicate.db import DictConnection
+from adjudicate.retrieval.expansion import rewrite_query
 from adjudicate.schemas import Clause, RetrievedClause
 
 RRF_K = 60
@@ -172,6 +173,7 @@ class SearchConfig:
     mode: str = "bm25"  # bm25 | dense | hybrid | rerank
     candidates: int = 50
     rerank_candidates: int = 20
+    rewrite: bool = True  # measured on dev: see docs/PROGRESS.md
 
 
 def search_clauses(
@@ -186,6 +188,7 @@ def search_clauses(
     index_factory: Callable[[DictConnection, str, str], Bm25Index] = tenant_bm25,
 ) -> list[RetrievedClause]:
     cfg = config or SearchConfig()
+    query = rewrite_query(query) if cfg.rewrite else query
     rankings: list[list[ChunkHit]] = []
     if cfg.mode in {"bm25", "hybrid", "rerank"}:
         rankings.append(index_factory(conn, tenant_id, cfg.strategy).search(query, cfg.candidates))

@@ -18,6 +18,7 @@ from typing import Any
 from adjudicate.config import REPO_ROOT
 from adjudicate.db import TenantPool
 from adjudicate.ingest.pipeline import parse_corpus
+from adjudicate.retrieval.expansion import rewrite_query
 from adjudicate.retrieval.pipeline import (
     SearchConfig,
     clear_cache,
@@ -91,6 +92,10 @@ def score_query(ranks: dict[str, int], gold: list[str]) -> dict[str, float]:
     return scores
 
 
+def _query(query: str, cfg: SearchConfig) -> str:
+    return rewrite_query(query) if cfg.rewrite else query
+
+
 def retrieve(
     conn,
     tenant: str,
@@ -100,6 +105,7 @@ def retrieve(
     embedder: Any = None,
     reranker: Any = None,
 ) -> list[dict]:
+    query = _query(query, cfg)
     rankings = []
     if cfg.mode in {"bm25", "hybrid", "rerank"}:
         rankings.append(tenant_bm25(conn, tenant, cfg.strategy).search(query, cfg.candidates))
@@ -169,6 +175,7 @@ def main() -> None:
     parser.add_argument("--split", default="dev")
     parser.add_argument("--strategies", default="A,B,C,D,E")
     parser.add_argument("--modes", default="bm25")
+    parser.add_argument("--rewrite", action="store_true", help="query rewriting on")
     parser.add_argument("--out", type=Path, default=REPO_ROOT / "evals/results/retrieval.json")
     args = parser.parse_args()
     embedder = reranker = None
@@ -182,7 +189,14 @@ def main() -> None:
     pool = TenantPool()
     clear_cache()
     results = [
-        run_config(pool, qrels, SearchConfig(strategy=s, mode=m), spans, embedder, reranker)
+        run_config(
+            pool,
+            qrels,
+            SearchConfig(strategy=s, mode=m, rewrite=args.rewrite),
+            spans,
+            embedder,
+            reranker,
+        )
         for s in args.strategies.split(",")
         for m in modes
     ]
