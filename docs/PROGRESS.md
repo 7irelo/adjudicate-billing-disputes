@@ -58,7 +58,23 @@ Real documents, 25 queries, no rewriting:
 
 ## CI
 
-The free job runs lint, types, tests, the mutation check, the oracle and constant gates, and BM25 retrieval. The paid smoke and nightly jobs need an `ANTHROPIC_API_KEY` secret, and there isn't one.
+**The workflows have never run,** because nothing has been pushed. The free job runs lint, types, tests, the mutation check, the oracle and constant gates, and BM25 retrieval. The paid smoke and nightly jobs need an `ANTHROPIC_API_KEY` secret.
+
+The plan asks for red builds on deliberate regression branches. That's still open. The same breakages were tested locally in a throwaway clone instead, and each one failed:
+
+| Deliberate regression | Result |
+|---|---|
+| Calculator caps instead of netting (the F-001 bug) | 3 worked credit cases fail |
+| `verify` stops checking quotes | 1 test fails |
+| Fraud route removed | 2 graph tests fail |
+| Constant model through the real gate | Gate exits 1, on zero-tolerance failures |
+| Seven RLS breakages | All 7 caught by `mutation_check.py` |
+
+## Last checked
+
+Commit `cc90efb` and its docs: 520 tests pass (encoder smoke left out), `ruff` and `pyright` clean, 7 of 7 mutations caught, oracle gate passes on 100 dev and 50 held-out cases, constant model fails. With records hidden, oracle record recall falls to about 3%, so the record pipeline does carry the evidence.
+
+**The Docker stack hasn't been rebuilt since the follow-up loop, rewriting and calibrator went in,** because memory was short. Rebuild with `docker compose up --build`. It also hasn't been tested from a fresh clone.
 
 ## What was stopped
 
