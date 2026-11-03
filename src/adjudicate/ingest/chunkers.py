@@ -38,34 +38,44 @@ def fixed_tokens(doc: ParsedDocument, size: int = 512, overlap: int = 64) -> lis
     return chunks
 
 
+def _units(text: str, max_tokens: int) -> list[tuple[int, int, int]]:
+    """Paragraphs as (start, end, words), falling back to lines for any paragraph that's too long.
+
+    That's the recursive step. PDF text has no blank lines, so a whole document can be one paragraph.
+    """
+    units: list[tuple[int, int, int]] = []
+    for para in re.finditer(r"[^\n]+(?:\n[^\n]+)*", text):
+        words = len(para.group().split())
+        if words <= max_tokens:
+            units.append((para.start(), para.end(), words))
+            continue
+        for line in re.finditer(r"[^\n]+", para.group()):
+            units.append(
+                (para.start() + line.start(), para.start() + line.end(), len(line.group().split()))
+            )
+    return units
+
+
 def recursive_paragraphs(doc: ParsedDocument, max_tokens: int = 120) -> list[Chunk]:
-    """B: merge consecutive paragraphs up to a size limit."""
+    """B: merge consecutive paragraphs or lines up to a size limit."""
     chunks: list[Chunk] = []
     start: int | None = None
     end = count = 0
-    for para in re.finditer(r"[^\n]+(?:\n[^\n]+)*", doc.full_text):
-        words = len(para.group().split())
-        if start is not None and count + words > max_tokens:
-            text = doc.full_text[start:end]
-            chunks.append(
-                Chunk(
-                    f"{doc.document_id}#B{len(chunks)}",
-                    "B",
-                    doc.document_id,
-                    text,
-                    text,
-                    start,
-                    end,
-                )
-            )
-            start, count = None, 0
-        start = para.start() if start is None else start
-        end, count = para.end(), count + words
-    if start is not None:
+
+    def flush() -> None:
         text = doc.full_text[start:end]
         chunks.append(
-            Chunk(f"{doc.document_id}#B{len(chunks)}", "B", doc.document_id, text, text, start, end)
+            Chunk(f"{doc.document_id}#B{len(chunks)}", "B", doc.document_id, text, text, start, end)  # pyright: ignore[reportArgumentType]
         )
+
+    for unit_start, unit_end, words in _units(doc.full_text, max_tokens):
+        if start is not None and count + words > max_tokens:
+            flush()
+            start, count = None, 0
+        start = unit_start if start is None else start
+        end, count = unit_end, count + words
+    if start is not None:
+        flush()
     return chunks
 
 
