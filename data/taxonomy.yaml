@@ -1,0 +1,27 @@
+dispute_types:
+  roaming: Charges for using the phone while abroad on another network.
+  international: Calls from South Africa to numbers in other countries.
+  cancellation: Charges connected to cancelling a contract or service.
+  double_billing: The same charge appearing more than once.
+  out_of_bundle: Charges after a bundle or allowance ran out.
+  suspected_fraud: The customer describes use they didn't make or authorise, or a compromised system.
+  other: Anything else about a bill.
+
+# Disputes overlap ("international calls I never made"). Apply the first match:
+precedence:
+  - suspected_fraud   # the customer denies making the calls, or describes a compromise
+  - cancellation      # the customer says the service was cancelled
+  - double_billing
+  - roaming
+  - out_of_bundle
+  - international
+  - other
+
+urgency:
+  routine: A billing question with no time pressure.
+  soon: A payment date or a small amount is at stake in the coming weeks.
+  urgent: Suspension, a large amount, or a debit order about to run.
+  critical: Service already suspended, debt collection, or fraud still happening.
+
+# The classifier sees only text. `suspected_fraud` means "the customer describes something
+# suspicious". Actual fraud routing comes from the records, in fraud/screen.py.

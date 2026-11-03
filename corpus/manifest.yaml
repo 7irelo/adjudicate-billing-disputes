@@ -1,0 +1,16 @@
+# Real documents used for benchmarks and short extracts. PDFs are never committed.
+# fetch with: python -m adjudicate.ingest.fetch (writes to corpus/raw/, which is gitignored).
+documents:
+  - id: icasa-gg-53991-2026
+    title: End-User and Subscriber Service Charter Amendment Regulations, 2025
+    url: https://www.ddyn.com/downloads/docsofinterest/ELCA_GG53991_R.7027_of_2026.pdf
+    publisher_note: A Data Dynamics reproduction of the Government Gazette. Prefer gpwonline.co.za if it can be reached.
+    retrieved: 2026-11-03
+    use: extracts served as a global document, and chunking benchmark
+    verified: Read directly. Commencement is clause 6 of the schedule.
+  - id: cellc-charter-copy
+    title: End-User and Subscriber Service Charter Regulations (operator's reproduction)
+    url: https://www.cellc.co.za/cellc/static-content/PDF/End-User-And-Subscriber-Service-Charter-Regulations-Terms-And-Conditions.pdf
+    retrieved: null
+    use: chunking benchmark only. Never served to a tenant.
+    verified: Not yet fetched.
