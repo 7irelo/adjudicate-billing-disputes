@@ -1,0 +1,298 @@
+# Hand-worked credit cases. Each amount was worked out by arithmetic in `working`, BEFORE
+# src/adjudicate/credit/calculator.py existed. The file is never generated from calculator output.
+# When a test disagrees, investigate both sides: either one can be wrong.
+#
+# provenance: assistant_draft. The plan wants these worked by the project owner. Re-check each one
+# by hand (or in a spreadsheet) and change `reviewed_by` before quoting exact-credit-match results.
+#
+# Conventions:
+#   amounts are VAT-inclusive integer cents; VAT 15% means vat = round(credit * 15 / 115), half up
+#   expected: {credit, vat} or {error: no_eligible_lines | ambiguous_facts}
+#   line fields: id, type, start, end, amount, prior (default 0), issued, correct (re-rated amount)
+reviewed_by: null
+dispute_date: 2026-06-20   # used unless a case overrides it
+issued: 2026-06-01         # used unless a line overrides it
+cases:
+  # --- full_line_reversal ---
+  - id: C01
+    method: full_line_reversal
+    lines: [{id: L1, type: usage_roaming, start: 2026-05-01, end: 2026-05-31, amount: 39900}]
+    working: "39900 full. vat 39900*15/115=5204.35 -> 5204"
+    expected: {credit: 39900, vat: 5204}
+  - id: C02
+    method: full_line_reversal
+    lines: [{id: L1, type: usage_roaming, start: 2026-05-01, end: 2026-05-31, amount: 10000, prior: 10000}]
+    working: "already fully credited: 10000-10000=0"
+    expected: {credit: 0, vat: 0}
+  - id: C03
+    method: full_line_reversal
+    lines: [{id: L1, type: usage_roaming, start: 2026-05-01, end: 2026-05-31, amount: 10000, prior: 12000}]
+    working: "prior exceeds charge: clamp to 0, never negative"
+    expected: {credit: 0, vat: 0}
+  - id: C04
+    method: full_line_reversal
+    lines:
+      - {id: L1, type: usage_roaming, start: 2026-05-01, end: 2026-05-31, amount: 25000, prior: 5000}
+      - {id: L2, type: usage_roaming, start: 2026-05-01, end: 2026-05-31, amount: 12345}
+    working: "(25000-5000)+12345=32345. vat 32345*15/115=4218.91 -> 4219"
+    expected: {credit: 32345, vat: 4219}
+
+  # --- duplicate_reversal ---
+  - id: C05
+    method: duplicate_reversal
+    lines:
+      - {id: L1, type: recurring, start: 2026-05-01, end: 2026-05-31, amount: 29900}
+      - {id: L2, type: recurring, start: 2026-05-01, end: 2026-05-31, amount: 29900}
+    working: "keep one, credit one: 29900. vat 29900*15/115=3900.00 -> 3900"
+    expected: {credit: 29900, vat: 3900}
+  - id: C06
+    method: duplicate_reversal
+    lines:
+      - {id: L1, type: recurring, start: 2026-05-01, end: 2026-05-31, amount: 10000}
+      - {id: L2, type: recurring, start: 2026-05-01, end: 2026-05-31, amount: 10000}
+      - {id: L3, type: recurring, start: 2026-05-01, end: 2026-05-31, amount: 10000}
+    working: "keep one, credit two: 20000. vat 20000*15/115=2608.70 -> 2609"
+    expected: {credit: 20000, vat: 2609}
+  - id: C07
+    method: duplicate_reversal
+    lines:
+      - {id: L1, type: recurring, start: 2026-05-01, end: 2026-05-31, amount: 29900}
+      - {id: L2, type: recurring, start: 2026-05-01, end: 2026-05-31, amount: 29900, prior: 10000}
+    working: "credit duplicate L2 less prior: 19900. vat 19900*15/115=2595.65 -> 2596"
+    expected: {credit: 19900, vat: 2596}
+  - id: C08
+    method: duplicate_reversal
+    lines:
+      - {id: L1, type: recurring, start: 2026-05-01, end: 2026-05-31, amount: 29900}
+      - {id: L2, type: recurring, start: 2026-05-01, end: 2026-05-31, amount: 29800}
+    working: "different amounts are not duplicates"
+    expected: {error: no_eligible_lines}
+  - id: C09
+    method: duplicate_reversal
+    lines:
+      - {id: L1, type: recurring, start: 2026-04-01, end: 2026-04-30, amount: 29900}
+      - {id: L2, type: recurring, start: 2026-05-01, end: 2026-05-31, amount: 29900}
+    working: "same amount in different periods is not a duplicate"
+    expected: {error: no_eligible_lines}
+
+  # --- post_cancellation_proration ---
+  - id: C10
+    method: post_cancellation_proration
+    proration: calendar_days
+    cancellation_effective: 2026-06-10
+    lines: [{id: L1, type: recurring, start: 2026-06-01, end: 2026-06-30, amount: 30000}]
+    working: "Jun 11-30 = 20 of 30 days: 30000*20/30=20000. vat 2608.70 -> 2609"
+    expected: {credit: 20000, vat: 2609}
+  - id: C11
+    method: post_cancellation_proration
+    proration: calendar_days
+    cancellation_effective: 2026-05-15
+    lines: [{id: L1, type: recurring, start: 2026-05-01, end: 2026-05-31, amount: 39900}]
+    working: "May 16-31 = 16 of 31: 39900*16/31=20593.55 -> 20594. vat 20594*15/115=2686.17 -> 2686"
+    expected: {credit: 20594, vat: 2686}
+  - id: C12
+    method: post_cancellation_proration
+    proration: thirty_day
+    cancellation_effective: 2026-05-15
+    lines: [{id: L1, type: recurring, start: 2026-05-01, end: 2026-05-31, amount: 39900}]
+    working: "30-day month: 15 days used, 15 left: 39900*15/30=19950. vat 19950*15/115=2602.17 -> 2602"
+    expected: {credit: 19950, vat: 2602}
+  - id: C13
+    method: post_cancellation_proration
+    proration: thirty_day
+    cancellation_effective: 2026-02-14
+    lines: [{id: L1, type: recurring, start: 2026-02-01, end: 2026-02-28, amount: 30000}]
+    working: "30-day month in Feb: 14 used, 16 left: 30000*16/30=16000. vat 16000*15/115=2086.96 -> 2087"
+    expected: {credit: 16000, vat: 2087}
+  - id: C14
+    method: post_cancellation_proration
+    proration: calendar_days
+    cancellation_effective: 2026-05-20
+    lines:
+      - {id: L1, type: recurring, start: 2026-04-01, end: 2026-04-30, amount: 30000}
+      - {id: L2, type: recurring, start: 2026-05-01, end: 2026-05-31, amount: 31000}
+      - {id: L3, type: recurring, start: 2026-06-01, end: 2026-06-30, amount: 30000}
+    working: "April before effective: none. May 21-31 = 11/31: 31000*11/31=11000. June all: 30000. Sum 41000. vat 41000*15/115=5347.83 -> 5348"
+    expected: {credit: 41000, vat: 5348}
+  - id: C15
+    method: post_cancellation_proration
+    proration: calendar_days
+    cancellation_effective: 2026-05-31
+    lines: [{id: L1, type: recurring, start: 2026-05-01, end: 2026-05-31, amount: 39900}]
+    working: "effective on the last service day: no days after it"
+    expected: {error: no_eligible_lines}
+  - id: C16
+    method: post_cancellation_proration
+    proration: calendar_days
+    cancellation_effective: 2026-05-01
+    lines: [{id: L1, type: recurring, start: 2026-05-01, end: 2026-05-02, amount: 101}]
+    working: "1 of 2 days: 101/2=50.5 -> half up 51. vat 51*15/115=6.65 -> 7"
+    expected: {credit: 51, vat: 7}
+  - id: C17
+    method: post_cancellation_proration
+    proration: calendar_days
+    cancellation_effective: 2026-06-10
+    lines: [{id: L1, type: recurring, start: 2026-06-01, end: 2026-06-30, amount: 30000, prior: 25000}]
+    # Corrected, see F-001 in docs/failure-log.md. This first said 5000, using a cap instead of netting.
+    working: "entitled to 20000 for the unused days, and 25000 is already credited: max(0, 20000-25000)=0"
+    expected: {credit: 0, vat: 0}
+
+  # --- post_cancellation_reversal (Karoo: no proration) ---
+  - id: C18
+    method: post_cancellation_reversal
+    cancellation_effective: 2026-05-31
+    lines: [{id: L1, type: recurring, start: 2026-06-01, end: 2026-06-30, amount: 30000}]
+    working: "June starts after effective: reverse in full. vat 3913.04 -> 3913"
+    expected: {credit: 30000, vat: 3913}
+  - id: C19
+    method: post_cancellation_reversal
+    cancellation_effective: 2026-06-01
+    lines: [{id: L1, type: recurring, start: 2026-06-01, end: 2026-06-30, amount: 30000}]
+    working: "June begins ON effective date, so it stands in full"
+    expected: {error: no_eligible_lines}
+  - id: C20
+    method: post_cancellation_reversal
+    cancellation_effective: 2026-05-10
+    lines:
+      - {id: L1, type: recurring, start: 2026-05-01, end: 2026-05-31, amount: 30000}
+      - {id: L2, type: recurring, start: 2026-06-01, end: 2026-06-30, amount: 30000}
+    working: "May stands with no proration, June reversed. vat 3913"
+    expected: {credit: 30000, vat: 3913}
+
+  # --- reversal_without_consent ---
+  - id: C21
+    method: reversal_without_consent
+    consent_kind: oob_opt_in
+    lines: [{id: L1, type: usage_oob, start: 2026-05-01, end: 2026-05-31, amount: 12500}]
+    consents: []
+    working: "no consent: reverse 12500. vat 12500*15/115=1630.43 -> 1630"
+    expected: {credit: 12500, vat: 1630}
+  - id: C22
+    method: reversal_without_consent
+    consent_kind: oob_opt_in
+    lines: [{id: L1, type: usage_oob, start: 2026-05-01, end: 2026-05-31, amount: 12500}]
+    consents: [{kind: oob_opt_in, granted: 2026-01-10}]
+    working: "consent active throughout: charge stands"
+    expected: {error: no_eligible_lines}
+  - id: C23
+    method: reversal_without_consent
+    consent_kind: oob_opt_in
+    lines: [{id: L1, type: usage_oob, start: 2026-05-01, end: 2026-05-31, amount: 12500}]
+    consents: [{kind: oob_opt_in, granted: 2026-01-10, revoked: 2026-04-20}]
+    working: "revoked before the service period: reverse. vat 1630"
+    expected: {credit: 12500, vat: 1630}
+  - id: C24
+    method: reversal_without_consent
+    consent_kind: oob_opt_in
+    lines: [{id: L1, type: usage_oob, start: 2026-05-01, end: 2026-05-31, amount: 12500}]
+    consents: [{kind: oob_opt_in, granted: 2026-05-15}]
+    working: "consent covers part of the period: facts don't settle it, so a human decides"
+    expected: {error: ambiguous_facts}
+  - id: C25
+    method: reversal_without_consent
+    consent_kind: oob_opt_in
+    lines: [{id: L1, type: usage_oob, start: 2026-05-01, end: 2026-05-31, amount: 12500}]
+    consents: [{kind: roaming_activation, granted: 2026-01-10}]
+    working: "a different kind of consent doesn't count: reverse. vat 1630"
+    expected: {credit: 12500, vat: 1630}
+
+  # --- bill_shock_over_cap ---
+  - id: C26
+    method: bill_shock_over_cap
+    cap: 50000
+    lines: [{id: L1, type: usage_international, start: 2026-05-01, end: 2026-05-31, amount: 120000}]
+    notifications: []
+    working: "120000-50000=70000. vat 70000*15/115=9130.43 -> 9130"
+    expected: {credit: 70000, vat: 9130}
+  - id: C27
+    method: bill_shock_over_cap
+    cap: 50000
+    lines: [{id: L1, type: usage_international, start: 2026-05-01, end: 2026-05-31, amount: 120000}]
+    notifications: [{kind: bill_shock, sent: 2026-05-20}]
+    working: "SMS was sent in the cycle: no credit"
+    expected: {error: no_eligible_lines}
+  - id: C28
+    method: bill_shock_over_cap
+    cap: 50000
+    lines: [{id: L1, type: usage_international, start: 2026-05-01, end: 2026-05-31, amount: 40000}]
+    notifications: []
+    working: "below cap: no credit"
+    expected: {error: no_eligible_lines}
+  - id: C29
+    method: bill_shock_over_cap
+    cap: 100000
+    lines:
+      - {id: L1, type: usage_international, start: 2026-05-01, end: 2026-05-31, amount: 80000}
+      - {id: L2, type: usage_roaming, start: 2026-05-01, end: 2026-05-31, amount: 40000, prior: 5000}
+    notifications: []
+    working: "net usage 80000+35000=115000; over cap 15000. vat 15000*15/115=1956.52 -> 1957"
+    expected: {credit: 15000, vat: 1957}
+  - id: C30
+    method: bill_shock_over_cap
+    cap: 50000
+    lines: [{id: L1, type: usage_international, start: 2026-05-01, end: 2026-05-31, amount: 120000}]
+    notifications: [{kind: bundle_depletion, sent: 2026-05-20}]
+    working: "a depletion SMS isn't a bill-shock SMS: 70000. vat 9130"
+    expected: {credit: 70000, vat: 9130}
+  - id: C31
+    method: bill_shock_over_cap
+    cap: 50000
+    lines:
+      - {id: L1, type: usage_international, start: 2026-04-01, end: 2026-04-30, amount: 60000}
+      - {id: L2, type: usage_international, start: 2026-05-01, end: 2026-05-31, amount: 70000}
+    notifications: [{kind: bill_shock, sent: 2026-04-15}]
+    working: "April had the SMS: none. May 70000-50000=20000. vat 2608.70 -> 2609"
+    expected: {credit: 20000, vat: 2609}
+
+  # --- rerate_difference ---
+  - id: C32
+    method: rerate_difference
+    lines: [{id: L1, type: usage_international, start: 2026-05-01, end: 2026-05-31, amount: 120000, correct: 90000}]
+    working: "120000-90000=30000. vat 3913.04 -> 3913"
+    expected: {credit: 30000, vat: 3913}
+  - id: C33
+    method: rerate_difference
+    lines: [{id: L1, type: usage_international, start: 2026-05-01, end: 2026-05-31, amount: 80000, correct: 90000}]
+    working: "under-billed: no credit, and no clawback"
+    expected: {error: no_eligible_lines}
+  - id: C34
+    method: rerate_difference
+    lines:
+      - {id: L1, type: usage_international, start: 2026-05-01, end: 2026-05-31, amount: 10000, correct: 7000, prior: 1000}
+      - {id: L2, type: usage_local, start: 2026-05-01, end: 2026-05-31, amount: 5000, correct: 5000}
+      - {id: L3, type: usage_roaming, start: 2026-05-01, end: 2026-05-31, amount: 20000, correct: 15000}
+    working: "(3000-1000)+0+5000=7000. vat 7000*15/115=913.04 -> 913"
+    expected: {credit: 7000, vat: 913}
+
+  # --- dispute window, on any method ---
+  - id: C35
+    method: full_line_reversal
+    window_days: 30
+    dispute_date: 2026-04-15
+    lines: [{id: L1, type: usage_roaming, start: 2026-02-01, end: 2026-02-28, amount: 10000, issued: 2026-03-01}]
+    working: "Mar 1 to Apr 15 = 45 days, outside 30"
+    expected: {error: no_eligible_lines}
+  - id: C36
+    method: full_line_reversal
+    window_days: 30
+    dispute_date: 2026-04-15
+    lines: [{id: L1, type: usage_roaming, start: 2026-02-01, end: 2026-02-28, amount: 10000, issued: 2026-03-16}]
+    working: "Mar 16 to Apr 15 = exactly 30 days: inside. vat 1304.35 -> 1304"
+    expected: {credit: 10000, vat: 1304}
+  - id: C37
+    method: full_line_reversal
+    window_days: 30
+    dispute_date: 2026-04-15
+    lines: [{id: L1, type: usage_roaming, start: 2026-02-01, end: 2026-02-28, amount: 10000, issued: 2026-03-15}]
+    working: "Mar 15 to Apr 15 = 31 days: outside"
+    expected: {error: no_eligible_lines}
+
+# Notice periods, worked with a 2026 calendar. SA public holidays in range: Fri 3 Apr, Mon 6 Apr,
+# Mon 27 Apr, Fri 1 May, Tue 16 Jun, Sun 9 Aug (observed Mon 10 Aug). 21 Mar 2026 is a Saturday.
+notice_cases:
+  - {id: N1, request: 2026-03-03, unit: business_days, count: 20, effective: 2026-03-31, working: "Mar 4-6(3), 9-13(8), 16-20(13), 23-27(18), 30, 31(20)"}
+  - {id: N2, request: 2026-03-20, unit: business_days, count: 20, effective: 2026-04-21, working: "Mar 23-27(5), 30-Apr 2(9), Apr 3+6 holidays, Apr 7-10(13), 13-17(18), 20, 21(20)"}
+  - {id: N3, request: 2026-04-01, unit: business_days, count: 20, effective: 2026-05-05, working: "Apr 2(1), 7-10(5), 13-17(10), 20-24(15), Apr 27 hol, 28-30(18), May 1 hol, May 4, 5(20)"}
+  - {id: N4, request: 2026-08-03, unit: business_days, count: 5, effective: 2026-08-11, working: "Aug 4-7(4), Aug 10 observed holiday, Aug 11(5)"}
+  - {id: N5, request: 2026-03-03, unit: calendar_days, count: 30, effective: 2026-04-02, working: "Mar 3 + 30 days"}
+  - {id: N6, request: 2026-06-15, unit: business_days, count: 1, effective: 2026-06-17, working: "Jun 16 is a holiday, so the first business day is Jun 17"}
