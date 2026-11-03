@@ -43,7 +43,8 @@ def judge_prompt(
 ) -> str:
     cited = {c.clause_id: clauses.get(c.clause_id, "") for c in decision.clause_citations}
     handles = {c.handle for c in decision.record_citations}
-    records = [e.for_model() for e in evidence if e.handle in handles]
+    parsed = [EvidenceSet.model_validate(e) for e in evidence]
+    records = [e.for_model() for e in parsed if e.handle in handles]
     return (
         f"DISPUTE:\n<dispute>\n{dispute}\n</dispute>\n\n"
         f"EVIDENCE (clauses):\n{cited}\n\nEVIDENCE (records):\n{records}\n\n"

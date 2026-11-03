@@ -66,7 +66,7 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Header"]
 "evals/classifier_eval.py" = ["E731"]
 
 [tool.pyright]
-include = ["src", "evals"]
+include = ["src", "evals", "scripts"]
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
 # torch, transformers, onnxruntime and gradio are optional extras.
@@ -100,4 +100,9 @@ eval = "python -m evals.runner"
 gate = "python -m evals.gate"
 serve = "uvicorn adjudicate.api.app:app --port 8000"
 mcp = "python -m adjudicate.mcp_server.server"
+embed = "python -m adjudicate.retrieval.models"
+fraud-eval = "python -m evals.fraud_eval"
+retrieval-eval = "python -m evals.retrieval_eval"
+real-benchmark = "python -m evals.real_benchmark"
+tables = "python -m evals.make_tables --write"
 ci = ["lint", "types", "test", "mutation-check"]

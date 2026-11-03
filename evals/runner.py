@@ -11,9 +11,10 @@ import json
 import subprocess
 import time
 import uuid
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,7 @@ from adjudicate.db import TenantPool
 from adjudicate.graph.build import PROMPT_HASH, RunOptions, build_graph, thread_config
 from adjudicate.llm import LLM, AnthropicLLM
 from adjudicate.mcp_server.service import ToolService
+from adjudicate.observability.tracing import flush, push_score
 from adjudicate.world.generator import AS_OF
 from adjudicate.world.seed import MANIFEST
 from evals.fake_llm import ConstantLLM, OracleLLM
@@ -134,6 +136,8 @@ def run_case(
         pre_resume.get("text"),
     ]
     grade["leaks"] = leaked_canaries(case["tenant"], prompts_blob)
+    push_score(dispute_id, "decision_correct", float(grade["decision_correct"]))
+    push_score(dispute_id, "credit_exact", float(grade["credit_exact"]))
     return {
         "case_id": case["case_id"],
         "rep": rep,
@@ -148,7 +152,30 @@ def run_case(
         "decision": state.get("decision"),
         "credit": state.get("credit"),
         "verify_errors": state.get("verify_errors", []),
+        "features": state.get("features"),
+        "p_correct": state.get("p_correct"),
+        "provenance": case.get("provenance"),
+        "judge_input": {
+            "text": state.get("text"),
+            "clauses": {c["clause_id"]: c["text"] for c in state.get("clauses", [])},
+            "evidence": state.get("evidence", []),
+        },
     }
+
+
+def write_judge_inputs(out: Path, rows: list[dict], inputs: dict[str, dict]) -> None:
+    """What the faithfulness judge sees for each decision. Kept apart from the result rows."""
+    with (out / "judge_inputs.jsonl").open("w", encoding="utf-8") as handle:
+        for row in rows:
+            key = f"{row['case_id']}:{row['rep']}"
+            if row["decision"] and key in inputs:
+                handle.write(
+                    json.dumps(
+                        {"case_id": row["case_id"], "decision": row["decision"], **inputs[key]},
+                        default=str,
+                    )
+                    + "\n"
+                )
 
 
 def make_llm(kind: str, case: dict, manifest: dict) -> LLM:
@@ -175,8 +202,12 @@ def run_suite(
     out.mkdir(parents=True, exist_ok=True)
     manifest = load_manifest()
     meta = stamp(kind, cases) | {"run_id": run_id, "reps": reps, "cases": len(cases)}
+    meta["provenance"] = dict(Counter(c.get("provenance", "unknown") for c in cases))
+    # Numbers on draft labels are plumbing checks, so they must never be quoted as results.
+    meta["reportable"] = kind == "anthropic" and set(meta["provenance"]) == {"hand_written"}
     rows: list[dict] = []
     errors: list[dict] = []
+    inputs: dict[str, dict] = {}
     spent = 0.0
     stopped = False
     with (
@@ -189,6 +220,12 @@ def run_suite(
                 if spent >= budget_usd:
                     stopped = True
                     break
+                # The oracle tests plumbing, so a classifier miss mustn't stop gold reaching it.
+                case_options = options
+                if kind == "oracle":
+                    case_options = replace(
+                        options or RunOptions(), oracle_type=case["expected_type"]
+                    )
                 future = executor.submit(
                     run_case,
                     case,
@@ -196,7 +233,7 @@ def run_suite(
                     pool,
                     run_id,
                     rep,
-                    options,
+                    case_options,
                     manifest,
                 )
                 try:
@@ -212,12 +249,13 @@ def run_suite(
                     errors_file.write(json.dumps(error) + "\n")
                     continue
                 spent += row["cost_usd"]
+                inputs[f"{row['case_id']}:{rep}"] = row.pop("judge_input")
                 rows.append(row)
                 results_file.write(json.dumps(row, default=str) + "\n")
                 results_file.flush()
     meta |= {"errors": len(errors), "spent_usd": round(spent, 4), "budget_stopped": stopped}
     (out / "meta.json").write_text(json.dumps(meta, indent=1), "utf-8")
-    return {"meta": meta, "rows": rows, "errors": errors, "out": str(out)}
+    return {"meta": meta, "rows": rows, "errors": errors, "out": str(out), "inputs": inputs}
 
 
 if __name__ == "__main__":
@@ -230,6 +268,11 @@ if __name__ == "__main__":
     parser.add_argument("--critical-only", action="store_true")
     parser.add_argument("--reps", type=int, default=1)
     parser.add_argument("--budget-usd", type=float, default=25.0)
+    parser.add_argument(
+        "--hide-records",
+        action="store_true",
+        help="mechanism check: remove records from the prompt, and scores must fall",
+    )
     args = parser.parse_args()
     if args.split == "heldout":
         print("Held-out run. Log it in docs/heldout-log.md: the limit is 3 runs.", date.today())
@@ -239,8 +282,11 @@ if __name__ == "__main__":
         TenantPool(),
         args.reps,
         args.budget_usd,
+        options=RunOptions(hide_records=True) if args.hide_records else None,
     )
     summary = summarise(suite["rows"], suite["errors"], suite["meta"])
     Path(suite["out"], "summary.json").write_text(json.dumps(summary, indent=1), "utf-8")
+    flush()
+    write_judge_inputs(Path(suite["out"]), suite["rows"], suite["inputs"])
     print(json.dumps(summary, indent=1))
     print("wrote", suite["out"])
