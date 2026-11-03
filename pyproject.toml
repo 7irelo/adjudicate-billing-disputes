@@ -52,7 +52,7 @@ packages = ["src/adjudicate", "evals"]
 [tool.ruff]
 line-length = 100
 src = ["src", "."]
-extend-exclude = ["notebooks"]
+extend-exclude = ["notebooks", "docs", "*.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "BLE", "C4", "SIM", "RUF", "TID"]

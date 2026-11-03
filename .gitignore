@@ -18,3 +18,4 @@ evals/results/*
 .vscode/
 data/world_manifest.json
 .uv-cache/
+docs/PLAN.md
