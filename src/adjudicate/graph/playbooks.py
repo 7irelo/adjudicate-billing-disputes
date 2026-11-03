@@ -99,11 +99,9 @@ def evidence_period(
     ), window_end
 
 
-def gather_records(
-    tools: Tools, dispute_type: str, account_ref: str, start: date, end: date
-) -> list[EvidenceSet]:
+def _fetchers(tools: Tools, account_ref: str, start: date, end: date) -> dict:
     baseline_start, baseline_end = start - timedelta(days=90), start - timedelta(days=1)
-    fetchers = {
+    return {
         "invoice": lambda: tools.lookup_invoice(account_ref, start, end),
         "roaming_cdrs": lambda: tools.search_cdrs(account_ref, start, end, ["roaming"]),
         "international_cdrs": lambda: tools.search_cdrs(account_ref, start, end, _INTL),
@@ -120,4 +118,20 @@ def gather_records(
         "tariff_international": lambda: tools.get_tariff(account_ref, "international", start),
         "tariff_oob": lambda: tools.get_tariff(account_ref, "oob", start),
     }
+
+
+def gather_records(
+    tools: Tools, dispute_type: str, account_ref: str, start: date, end: date
+) -> list[EvidenceSet]:
+    fetchers = _fetchers(tools, account_ref, start, end)
     return [fetchers[name]() for name in PLAYBOOKS[dispute_type].records]
+
+
+def gather_everything(tools: Tools, account_ref: str, start: date, end: date) -> list[EvidenceSet]:
+    """Every record kind for the account. The record oracle uses this for failure attribution."""
+    return [fetch() for fetch in _fetchers(tools, account_ref, start, end).values()]
+
+
+def fetch_one(tools: Tools, name: str, account_ref: str, start: date, end: date) -> EvidenceSet:
+    """One follow-up request. `name` comes from the Decision schema's fixed list."""
+    return _fetchers(tools, account_ref, start, end)[name]()

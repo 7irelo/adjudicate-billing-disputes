@@ -24,13 +24,20 @@ from langgraph.types import interrupt
 from adjudicate.config import Settings, get_settings
 from adjudicate.credit.money import rand
 from adjudicate.credit.rules import load_policy
+from adjudicate.graph.calibrator import calibration_features, load_calibrator
 from adjudicate.graph.gate import GateInput, gate_reasons
 from adjudicate.graph.intake import run_intake
-from adjudicate.graph.playbooks import clause_queries, evidence_period, gather_records
+from adjudicate.graph.playbooks import (
+    clause_queries,
+    evidence_period,
+    fetch_one,
+    gather_everything,
+    gather_records,
+)
 from adjudicate.graph.verify import verify_decision
 from adjudicate.llm import LLM, LLMFailure, Usage
 from adjudicate.mcp_server.service import Tools
-from adjudicate.observability.tracing import span
+from adjudicate.observability.tracing import record_generation, span, trace_id_for
 from adjudicate.schemas import (
     Classification,
     Clause,
@@ -48,6 +55,7 @@ SYSTEM_PROMPT = (
 PROMPT_HASH = hashlib.sha256(SYSTEM_PROMPT.encode()).hexdigest()[:12]
 CLAUSE_K = 8
 MAX_REPAIRS = 1
+MAX_FOLLOW_UPS = 1
 
 
 @dataclass
@@ -82,6 +90,9 @@ class DisputeState(TypedDict, total=False):
     llm_failure: str | None
     verify_errors: list[str]
     repairs: int
+    follow_ups: int
+    p_correct: float | None
+    features: dict
     credit_status: str | None
     credit: dict | None
     credit_note_id: str | None
@@ -120,9 +131,31 @@ def expand_citations(evidence: list[EvidenceSet], citations: list[RecordCitation
 
 
 def customer_message(
-    tenant_name: str, decision: Decision | None, credit: dict | None, route: str
+    tenant_name: str,
+    decision: Decision | None,
+    credit: dict | None,
+    route: str,
+    resolution: dict | None = None,
 ) -> str:
     """Templated, so the model's text can never state a credit amount to a customer."""
+    action = (resolution or {}).get("action")
+    if route == "human" and action == "approve" and decision and decision.decision == "credit_due":
+        amount = rand(credit["credit_cents"]) if credit else None
+        if amount:
+            return (
+                f"A {tenant_name} billing specialist approved a credit of {amount}. "
+                "If you are unhappy with this outcome, you may escalate it."
+            )
+    if (
+        route == "human"
+        and action == "approve"
+        and decision
+        and decision.decision == "charge_valid"
+    ):
+        return (
+            f"A {tenant_name} billing specialist reviewed the charge and found it correct under "
+            "your agreement. If you are unhappy with this outcome, you may escalate it."
+        )
     if route == "fraud":
         return (
             f"{tenant_name} is investigating this dispute with its fraud team. No credit decision "
@@ -196,6 +229,7 @@ def build_graph(tools: Tools, llm: LLM, settings: Settings | None = None, checkp
             "evidence_start": got.period_start.isoformat() if got.period_explicit else "",
             "injection_suspected": got.injection_suspected,
             "repairs": 0,
+            "follow_ups": 0,
             "verify_errors": [],
         }
 
@@ -235,7 +269,10 @@ def build_graph(tools: Tools, llm: LLM, settings: Settings | None = None, checkp
             clauses = [pair[0] for pair in ranked[: CLAUSE_K * 2]]
             scores = [pair[1] for pair in ranked[: CLAUSE_K * 2]]
 
-        evidence = gather_records(tools, kind, state["account_ref"], start, end)
+        if options.get("oracle_record_ids") is not None:
+            evidence = gather_everything(tools, state["account_ref"], start, end)
+        else:
+            evidence = gather_records(tools, kind, state["account_ref"], start, end)
         if options.get("hide_records"):
             evidence = []
         return {
@@ -268,7 +305,22 @@ def build_graph(tools: Tools, llm: LLM, settings: Settings | None = None, checkp
             )
         except LLMFailure as failure:
             usage = [asdict(failure.usage)] if failure.usage else []
+            if failure.usage:
+                record_generation(
+                    state["dispute_id"],
+                    state["tenant_id"],
+                    usage[0],
+                    failure.usage.cost_usd,
+                    PROMPT_HASH,
+                )
             return {"decision": None, "llm_failure": failure.reason, "usage": usage}
+        record_generation(
+            state["dispute_id"],
+            state["tenant_id"],
+            asdict(result.usage),
+            result.usage.cost_usd,
+            PROMPT_HASH,
+        )
         return {
             "decision": result.parsed.model_dump(),
             "llm_failure": None,
@@ -291,7 +343,33 @@ def build_graph(tools: Tools, llm: LLM, settings: Settings | None = None, checkp
     def route_after_verify(state: DisputeState) -> str:
         if state.get("verify_errors") and state.get("repairs", 0) < MAX_REPAIRS:
             return "repair"
+        decision = state.get("decision")
+        if (
+            decision
+            and decision.get("follow_up")
+            and not decision.get("evidence_sufficient", True)
+            and cfg.follow_up_enabled
+            and state.get("follow_ups", 0) < MAX_FOLLOW_UPS
+        ):
+            return "follow_up"
         return "calculate_credit"
+
+    def follow_up(state: DisputeState) -> dict:
+        """Fetch the one record set the model asked for, then let it decide again."""
+        got = fetch_one(
+            tools,
+            (state.get("decision") or {})["follow_up"],
+            state["account_ref"],
+            date.fromisoformat(state["period_start"]),
+            date.fromisoformat(state["period_end"]),
+        )
+        known = {e["handle"] for e in state.get("evidence", [])}
+        extra = [] if got.handle in known else [got.model_dump(mode="json")]
+        return {
+            "evidence": [*state.get("evidence", []), *extra],
+            "follow_ups": state.get("follow_ups", 0) + 1,
+            "verify_errors": [],
+        }
 
     def repair(state: DisputeState) -> dict:
         return {"repairs": state.get("repairs", 0) + 1}
@@ -338,7 +416,18 @@ def build_graph(tools: Tools, llm: LLM, settings: Settings | None = None, checkp
                 auto_finalise_rejections=cfg.auto_finalise_rejections,
             )
         )
-        return {"reasons": reasons, "routed_to": "human" if reasons else "auto"}
+        features = calibration_features(state)
+        calibrator = load_calibrator()
+        p_correct = calibrator.probability(features) if calibrator else None
+        # Stage 2 only ever narrows what stays automatic. It can't override a hard rule.
+        if calibrator and not reasons and (p_correct or 0.0) < calibrator.threshold:
+            reasons.append("below_calibrated_threshold")
+        return {
+            "reasons": reasons,
+            "routed_to": "human" if reasons else "auto",
+            "p_correct": p_correct,
+            "features": features,
+        }
 
     def route_after_gate(state: DisputeState) -> str:
         return "human_review" if state["routed_to"] == "human" else "finalise"
@@ -385,9 +474,16 @@ def build_graph(tools: Tools, llm: LLM, settings: Settings | None = None, checkp
             cited_record_ids=expand_citations(evidence, citations),
             cited_clause_ids=[c.clause_id for c in decision.clause_citations] if decision else [],
             customer_message=customer_message(
-                policy.name, decision, state.get("credit"), state["routed_to"]
+                policy.name,
+                decision,
+                state.get("credit"),
+                state["routed_to"],
+                state.get("resolution"),
             ),
             review_id=state.get("review_id"),
+            resolution=state.get("resolution"),
+            trace_id=trace_id_for(state["dispute_id"]),
+            p_correct=state.get("p_correct"),
             cost_usd=sum(u.cost_usd for u in usages),
             latency_ms=sum(ms for _, ms in state.get("node_ms", [])),
         )
@@ -404,6 +500,7 @@ def build_graph(tools: Tools, llm: LLM, settings: Settings | None = None, checkp
         "decide": decide,
         "verify": verify,
         "repair": repair,
+        "follow_up": follow_up,
         "calculate_credit": calculate_credit,
         "confidence_gate": confidence_gate,
         "fraud_review": fraud_review,
@@ -421,9 +518,12 @@ def build_graph(tools: Tools, llm: LLM, settings: Settings | None = None, checkp
     )
     graph.add_edge("decide", "verify")
     graph.add_conditional_edges(
-        "verify", route_after_verify, {"repair": "repair", "calculate_credit": "calculate_credit"}
+        "verify",
+        route_after_verify,
+        {"repair": "repair", "follow_up": "follow_up", "calculate_credit": "calculate_credit"},
     )
     graph.add_edge("repair", "decide")
+    graph.add_edge("follow_up", "decide")
     graph.add_edge("calculate_credit", "confidence_gate")
     graph.add_conditional_edges(
         "confidence_gate",

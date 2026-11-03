@@ -96,6 +96,19 @@ class RecordCitation(BaseModel):
     record_ids: list[str] = Field(default_factory=list)
 
 
+FollowUp = Literal[
+    "subscription",
+    "consents",
+    "notifications",
+    "credit_notes",
+    "payments",
+    "international_cdrs",
+    "roaming_cdrs",
+    "oob_cdrs",
+    "baseline_cdrs",
+]
+
+
 class Decision(BaseModel):
     decision: DecisionKind
     credit_rule_id: str | None = None
@@ -104,6 +117,8 @@ class Decision(BaseModel):
     record_citations: list[RecordCitation] = Field(default_factory=list)
     missing_facts: list[str] = Field(default_factory=list)
     evidence_sufficient: bool = True
+    # One bounded request for more records, from a fixed list, when evidence is insufficient.
+    follow_up: FollowUp | None = None
 
 
 class CreditComputation(BaseModel):
@@ -152,6 +167,7 @@ class DisputeResult(BaseModel):
     cited_clause_ids: list[str] = Field(default_factory=list)
     customer_message: str = ""
     review_id: str | None = None
+    resolution: dict[str, Any] | None = None
     trace_id: str | None = None
     cost_usd: float = 0.0
     latency_ms: int = 0

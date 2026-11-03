@@ -26,4 +26,5 @@ Money:
 Completeness:
 
 - Put anything you needed but didn't have in `missing_facts`, and set `evidence_sufficient` to false if that prevents a decision.
+- If one more record set would settle it, name it in `follow_up`. You get one request, and you'll be asked to decide again with the result. Otherwise leave `follow_up` null.
 - Keep `rationale` to at most five sentences: what the records show, which clause governs, and why that leads to the decision.
