@@ -207,6 +207,26 @@ def oob_with_consent(w: World, tenant: str) -> ScenarioInfo:
 
 
 @scenario
+def oob_partial_consent(w: World, tenant: str) -> ScenarioInfo:
+    """An opt-in granted partway through May. The records can't settle which usage it covers."""
+    info = _start(w, tenant, "oob_partial_consent")
+    consent = w.add_consent(tenant, info.subscription_id, "oob_opt_in", date(2026, 5, 15))
+    cdrs = [
+        w.add_call(
+            tenant, info.subscription_id, sast(2026, 5, 3 + i * 3, 9), 600, "+27 21 555 0100", "oob"
+        )
+        for i in range(8)
+    ]
+    lines = _plain_months(w, info)
+    info.records = {
+        "oob_line": [lines[(2026, 5)]["usage_oob"]],
+        "consent": [consent],
+        "cdrs": cdrs,
+    }
+    return info
+
+
+@scenario
 def roaming_no_activation(w: World, tenant: str) -> ScenarioInfo:
     info = _start(w, tenant, "roaming_no_activation")
     cdrs = [

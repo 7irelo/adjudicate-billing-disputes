@@ -60,3 +60,21 @@ def test_tenants_differ_in_decision_changing_ways() -> None:
     assert karoo.rule("bill_shock_over_cap", on) is None
     assert fynbos.rule("oob_without_consent", on) is None
     assert load_policy("baobab").rule("bill_shock_over_cap", on) is not None
+
+
+def test_retrieval_labels_resolve_and_match_the_plan_size() -> None:
+    import json
+
+    from adjudicate.config import REPO_ROOT
+
+    rows = [
+        json.loads(x)
+        for x in (REPO_ROOT / "data/retrieval/qrels.jsonl").read_text("utf-8").splitlines()
+        if x
+    ]
+    assert sum(r["split"] == "dev" for r in rows) == 60
+    assert sum(r["split"] == "test" for r in rows) == 40
+    assert len({r["qid"] for r in rows}) == 100
+    for row in rows:
+        for clause in row["gold_clauses"]:
+            assert clause in ALL_CLAUSES, f"{row['qid']}: {clause}"

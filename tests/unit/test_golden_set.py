@@ -10,7 +10,8 @@ from adjudicate.world.seed import build_world, manifest
 
 CASES = [
     json.loads(line)
-    for line in (REPO_ROOT / "data/golden/dev.jsonl").read_text("utf-8").splitlines()
+    for split in ("dev", "heldout")
+    for line in (REPO_ROOT / f"data/golden/{split}.jsonl").read_text("utf-8").splitlines()
     if line
 ]
 SCENARIOS = manifest(build_world(1, 0))["scenarios"]
@@ -46,3 +47,21 @@ def test_golden_text_is_not_in_the_prompt() -> None:
     prompt = (REPO_ROOT / "src/adjudicate/prompts/decide.md").read_text("utf-8")
     for case in CASES:
         assert case["dispute_text"] not in prompt
+
+
+def test_sizes_match_the_plan() -> None:
+    assert sum(c["case_id"] < "G-0500" for c in CASES) == 100
+    assert sum(c["case_id"] > "G-0500" for c in CASES) == 50
+
+
+def test_every_case_declares_where_its_label_came_from() -> None:
+    assert {c["provenance"] for c in CASES} <= {"assistant_draft", "hand_written"}
+
+
+def test_balance_is_close_to_the_plan() -> None:
+    counts = {
+        d: sum(c["expected_decision"] == d for c in CASES)
+        for d in ("credit_due", "charge_valid", "needs_review")
+    }
+    assert all(count >= 30 for count in counts.values()), counts
+    assert sum("fraud_case" in c["tags"] for c in CASES) >= 20
