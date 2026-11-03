@@ -1,0 +1,47 @@
+tenant_id: karoo
+name: Karoo Connect
+customer_type: consumer
+proration: none
+notice: {unit: business_days, count: 20}
+rules:
+  - rule_id: duplicate_reversal
+    version: 1
+    effective_from: 2025-01-01
+    authorising_clauses: ["karoo-tcs-2025:billing:2.3"]
+    method: duplicate_reversal
+    auto_credit_limit_cents: 50000
+    dispute_window_days: 30
+  - rule_id: rerate_difference
+    version: 1
+    effective_from: 2025-01-01
+    authorising_clauses: ["karoo-tcs-2025:billing:2.4"]
+    method: rerate_difference
+    line_types: [usage_local, usage_international, usage_roaming, usage_oob]
+    auto_credit_limit_cents: 50000
+    dispute_window_days: 30
+  - rule_id: oob_without_consent
+    version: 1
+    effective_from: 2025-01-01
+    authorising_clauses: ["karoo-tcs-2025:out_of_bundle:3.2"]
+    method: reversal_without_consent
+    line_types: [usage_oob]
+    consent_kind: oob_opt_in
+    auto_credit_limit_cents: 50000
+    dispute_window_days: 30
+  - rule_id: roaming_without_activation
+    version: 1
+    effective_from: 2025-01-01
+    authorising_clauses: ["karoo-tcs-2025:roaming:6.2"]
+    method: reversal_without_consent
+    line_types: [usage_roaming]
+    consent_kind: roaming_activation
+    auto_credit_limit_cents: 50000
+    dispute_window_days: 30
+  - rule_id: post_cancellation_reversal
+    version: 1
+    effective_from: 2025-01-01
+    authorising_clauses: ["karoo-tcs-2025:cancellation:5.3"]
+    method: post_cancellation_reversal
+    line_types: [recurring]
+    auto_credit_limit_cents: 50000
+    dispute_window_days: 30

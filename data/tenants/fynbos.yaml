@@ -1,0 +1,38 @@
+tenant_id: fynbos
+name: Fynbos Voice
+customer_type: business
+proration: calendar_days
+notice: {unit: calendar_days, count: 30}
+rules:
+  - rule_id: duplicate_reversal
+    version: 1
+    effective_from: 2025-01-01
+    authorising_clauses: ["fynbos-msa-2025:billing:2.3"]
+    method: duplicate_reversal
+    auto_credit_limit_cents: 250000
+    dispute_window_days: 60
+  - rule_id: rerate_difference
+    version: 1
+    effective_from: 2025-01-01
+    authorising_clauses: ["fynbos-msa-2025:billing:2.4"]
+    method: rerate_difference
+    line_types: [usage_local, usage_international]
+    auto_credit_limit_cents: 250000
+    dispute_window_days: 60
+  - rule_id: roaming_billed_in_error
+    version: 1
+    effective_from: 2025-01-01
+    authorising_clauses: ["fynbos-msa-2025:roaming:6.1"]
+    method: full_line_reversal
+    line_types: [usage_roaming]
+    auto_credit_limit_cents: 250000
+    dispute_window_days: 60
+  - rule_id: post_termination_proration
+    version: 1
+    effective_from: 2025-01-01
+    authorising_clauses: ["fynbos-msa-2025:cancellation:5.3"]
+    method: post_cancellation_proration
+    proration: calendar_days
+    line_types: [recurring]
+    auto_credit_limit_cents: 250000
+    dispute_window_days: 60
