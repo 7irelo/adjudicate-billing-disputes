@@ -1,0 +1,65 @@
+name: adjudicate-billing-disputes
+
+x-app-env: &app-env
+  ADJUDICATE_OWNER_DSN: postgresql://adjudicate_owner:owner_dev_pw@postgres:5432/adjudicate
+  ADJUDICATE_ADMIN_DSN: postgresql://adjudicate_admin:admin_dev_pw@postgres:5432/adjudicate
+  ADJUDICATE_APP_DSN: postgresql://adjudicate_app:app_dev_pw@postgres:5432/adjudicate
+  ADJUDICATE_CHECKPOINT_DSN: postgresql://adjudicate_checkpoint:checkpoint_dev_pw@postgres:5432/adjudicate
+  ADJUDICATE_MCP_URL: http://mcp:8765/mcp
+  ADJUDICATE_MANIFEST: /shared/world_manifest.json
+  ADJUDICATE_TOKEN_SECRET: ${ADJUDICATE_TOKEN_SECRET:-dev-only-secret-change-me-at-least-32-bytes}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+  LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+  LANGFUSE_HOST: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_PASSWORD: postgres_dev_pw
+      POSTGRES_DB: adjudicate
+    ports: ["55432:5432"]
+    volumes:
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # TCP on purpose: the entrypoint's temporary init server only listens on the Unix socket.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d adjudicate"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  seed:
+    build: .
+    command: ["python", "-m", "adjudicate.world.seed"]
+    environment: *app-env
+    volumes: ["shared:/shared"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  mcp:
+    build: .
+    command: ["python", "-m", "adjudicate.mcp_server.server", "--host", "0.0.0.0"]
+    environment: *app-env
+    depends_on:
+      seed: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 8765), 2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  app:
+    build: .
+    command: ["uvicorn", "adjudicate.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment: *app-env
+    volumes: ["shared:/shared"]
+    ports: ["8000:8000"]
+    depends_on:
+      mcp: { condition: service_healthy }
+
+volumes:
+  pgdata:
+  shared:

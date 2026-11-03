@@ -1,0 +1,103 @@
+[project]
+name = "adjudicate"
+version = "0.1.0"
+description = "Multi-tenant agent for telecom billing disputes with deterministic credit calculation, fraud escalation and CI-gated evals."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "MIT" }
+dependencies = [
+  "anthropic>=2.4,<3",
+  "bm25s>=0.3.16",
+  "fastapi>=0.162",
+  "httpx>=0.28",
+  "langfuse>=5.1,<6",
+  "langgraph>=1.2,<2",
+  "langgraph-checkpoint-postgres>=3.2,<4",
+  "mcp>=2.3,<3",
+  "numpy>=2",
+  "pgvector>=0.5",
+  "psycopg[binary,pool]>=3.3",
+  "pydantic>=2.10",
+  "pydantic-settings>=2.6",
+  "pyjwt>=2.10",
+  "pyyaml>=6",
+  "scikit-learn>=1.6",
+  "uvicorn>=0.34",
+]
+
+[project.optional-dependencies]
+ui = ["gradio>=6"]
+ingest = ["pdfplumber>=0.11"]
+ml = ["sentence-transformers>=6", "transformers>=5", "torch>=2.5", "onnxruntime>=1.20", "accelerate>=1.0"]
+
+[dependency-groups]
+dev = [
+  "hypothesis>=6.120",
+  "openpyxl>=3.1",
+  "pre-commit>=4",
+  "pyright>=1.1.390",
+  "pytest>=8.3",
+  "pytest-asyncio>=0.25",
+  "poethepoet>=0.32",
+  "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/adjudicate", "evals"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "."]
+extend-exclude = ["notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "BLE", "C4", "SIM", "RUF", "TID"]
+ignore = ["RUF012", "E501", "RUF001", "RUF003"]  # long lines: ruff format decides
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Header"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["BLE"]
+"evals/classifier_eval.py" = ["E731"]
+
+[tool.pyright]
+include = ["src", "evals"]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+# torch, transformers, onnxruntime and gradio are optional extras.
+reportMissingImports = "warning"
+# DisputeState is total=False because nodes return partial updates; the graph order guarantees keys.
+reportTypedDictNotRequiredAccess = false
+reportAttributeAccessIssue = "warning"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+asyncio_mode = "auto"
+markers = [
+  "db: needs the Postgres service (uv run poe db-up)",
+  "llm: calls the paid Anthropic API",
+]
+
+[tool.poe.tasks]
+db-up = "docker compose up -d --wait postgres"
+db-down = "docker compose down -v"
+migrate = "python -m adjudicate.db migrate"
+seed = "python -m adjudicate.world.seed"
+lint = "ruff check ."
+format = "ruff format ."
+types = "pyright"
+test = "pytest -m 'not llm'"
+isolation = "pytest tests/isolation"
+mutation-check = "python -m tests.isolation.mutation_check"
+dispute = "python -m adjudicate.cli"
+eval = "python -m evals.runner"
+gate = "python -m evals.gate"
+serve = "uvicorn adjudicate.api.app:app --port 8000"
+mcp = "python -m adjudicate.mcp_server.server"
+ci = ["lint", "types", "test", "mutation-check"]
