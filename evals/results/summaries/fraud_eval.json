@@ -1,0 +1,51 @@
+{
+ "note": "Synthetic patterns only. Says nothing about real-world fraud detection.",
+ "accounts_per_pattern": 15,
+ "tune_seed": 11,
+ "report_seed": 23,
+ "chosen_thresholds": {
+  "spike_strong_multiple": 12,
+  "high_risk_strong_calls": 3,
+  "off_hours_burst_calls": 15,
+  "sequential_run": 8
+ },
+ "default_on_report_seed": {
+  "per_pattern_flag_rate": {
+   "pbx_burst": 1.0,
+   "irsf": 1.0,
+   "wangiri": 0.867,
+   "low_and_slow": 0.0,
+   "real_trip": 0.0,
+   "diaspora_family": 0.0,
+   "overseas_client": 0.0
+  },
+  "fraud_recall": 0.717,
+  "false_escalation": 0.0
+ },
+ "chosen_on_tuning_seed": {
+  "per_pattern_flag_rate": {
+   "pbx_burst": 1.0,
+   "irsf": 1.0,
+   "wangiri": 0.933,
+   "low_and_slow": 0.0,
+   "real_trip": 0.0,
+   "diaspora_family": 0.0,
+   "overseas_client": 0.0
+  },
+  "fraud_recall": 0.733,
+  "false_escalation": 0.0
+ },
+ "chosen_on_report_seed": {
+  "per_pattern_flag_rate": {
+   "pbx_burst": 1.0,
+   "irsf": 1.0,
+   "wangiri": 1.0,
+   "low_and_slow": 0.0,
+   "real_trip": 0.0,
+   "diaspora_family": 0.0,
+   "overseas_client": 0.0
+  },
+  "fraud_recall": 0.75,
+  "false_escalation": 0.0
+ }
+}

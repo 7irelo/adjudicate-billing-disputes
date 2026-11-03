@@ -1,0 +1,58 @@
+[
+ {
+  "arm": "majority",
+  "n": 150,
+  "type_macro_f1": 0.035,
+  "type_accuracy": {
+   "mean": 0.14,
+   "ci": [
+    0.087,
+    0.193
+   ]
+  },
+  "per_class_f1": {
+   "cancellation": 0.0,
+   "double_billing": 0.0,
+   "international": 0.0,
+   "other": 0.0,
+   "out_of_bundle": 0.0,
+   "roaming": 0.0,
+   "suspected_fraud": 0.246
+  },
+  "urgency_macro_f1": 0.204,
+  "urgency_qwk": 0.0,
+  "critical_recall": 0.0,
+  "ece": 0.003,
+  "p50_ms": 0.0,
+  "p95_ms": 0.0,
+  "usd_per_1k": 0.0
+ },
+ {
+  "arm": "tfidf",
+  "n": 150,
+  "type_macro_f1": 0.713,
+  "type_accuracy": {
+   "mean": 0.82,
+   "ci": [
+    0.76,
+    0.88
+   ]
+  },
+  "per_class_f1": {
+   "cancellation": 0.857,
+   "double_billing": 0.96,
+   "international": 0.737,
+   "other": 0.0,
+   "out_of_bundle": 0.826,
+   "roaming": 0.8,
+   "suspected_fraud": 0.81
+  },
+  "urgency_macro_f1": 0.566,
+  "urgency_qwk": 0.577,
+  "critical_recall": 0.6,
+  "ece": 0.371,
+  "p50_ms": 7.26,
+  "p95_ms": 15.27,
+  "usd_per_1k": 0.0
+ }
+]
