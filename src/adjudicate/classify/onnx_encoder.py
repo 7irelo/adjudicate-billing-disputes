@@ -1,3 +1,4 @@
+# pyright: reportIndexIssue=false
 """Serve the exported encoder on CPU with ONNX Runtime. Requires the `ml` extra."""
 
 import json

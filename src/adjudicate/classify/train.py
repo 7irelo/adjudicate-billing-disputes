@@ -88,6 +88,33 @@ def evaluate(model, rows, tokenizer, device) -> dict:
     }
 
 
+def fit_temperature(logits: torch.Tensor, labels: torch.Tensor, steps: int = 200) -> float:
+    """Temperature scaling on validation logits: one parameter, so it can't change the ranking."""
+    log_temperature = torch.zeros(1, requires_grad=True)
+    optimiser = torch.optim.LBFGS([log_temperature], lr=0.1, max_iter=steps)
+    loss_fn = nn.CrossEntropyLoss()
+
+    def closure():
+        optimiser.zero_grad()
+        loss = loss_fn(logits / log_temperature.exp(), labels)
+        loss.backward()
+        return loss
+
+    optimiser.step(closure)
+    return float(log_temperature.exp().item())
+
+
+def validation_logits(model, rows, tokenizer, device) -> tuple[torch.Tensor, torch.Tensor]:
+    model.eval()
+    all_logits, all_labels = [], []
+    with torch.no_grad():
+        for encoded, types, _ in _batches(rows, tokenizer, 64, device, shuffle=False):
+            logits, _ = model(encoded["input_ids"], encoded["attention_mask"])
+            all_logits.append(logits.cpu())
+            all_labels.append(types.cpu())
+    return torch.cat(all_logits), torch.cat(all_labels)
+
+
 def train(args: argparse.Namespace) -> dict:
     torch.manual_seed(args.seed)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -134,7 +161,15 @@ def train(args: argparse.Namespace) -> dict:
             patience += 1
             if patience >= args.patience:
                 break
-    run = {"model": name, "seed": args.seed, "best_val_type_macro_f1": best, "log": log}
+    model.load_state_dict(torch.load(out / "best.pt", map_location=device))
+    temperature = fit_temperature(*validation_logits(model, val_rows, tokenizer, device))
+    run = {
+        "model": name,
+        "seed": args.seed,
+        "best_val_type_macro_f1": best,
+        "temperature": temperature,
+        "log": log,
+    }
     with (out / "runs.jsonl").open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(run) + "\n")
     return run
