@@ -8,6 +8,12 @@ All operators, customers and records are fictional. This is a portfolio project,
 
 **In progress. There are no model results yet.** The system runs end to end with a scripted model, and its deterministic parts are tested. Decision quality hasn't been measured, because that needs an API key and owner-reviewed labels. See [`docs/PROGRESS.md`](docs/PROGRESS.md).
 
+## Results
+
+<!-- results:start -->
+**There are no model results to report yet.** A number appears here only for a real model on owner-labelled data.
+<!-- results:end -->
+
 ## Architecture
 
 ```mermaid

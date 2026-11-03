@@ -99,3 +99,21 @@ Rejected fixes: Granting the admin role access in the mutation so the old query 
 Regression test: The mutation stays in `mutation_check.py`, which runs in CI.
 
 What it taught me: A guard that had never failed was wrong in the one case it was written for. The plan's line about tests that have never failed turned out to be literal.
+
+## F-006: Footnotes were parsed as clauses in a real gazette
+
+Found: 2026-11-04, `parse_check` on Government Gazette 53991, the first real document through the parser.
+
+Symptom: The clause sample included lines like "17 Rain Initial Submission 2024 Page 2 Para 1.4". Numbered footnotes looked just like numbered clauses.
+
+Layer: ingestion.
+
+Root cause: The splitter treated any line starting with a number as a new clause. The authored T&Cs have no footnotes, so every authored-document test passed.
+
+Fix: A footnote pattern in `ingest/parse.py`, checked before splitting.
+
+Rejected fixes: Requiring a dotted clause number, which would drop top-level clauses such as "6 Short title and Commencement".
+
+Regression test: `test_footnotes_are_not_clauses`.
+
+What it taught me: This is the plan's self-authored-world threat in miniature. My own documents could never have produced this bug, and the first real one did on its first read.
