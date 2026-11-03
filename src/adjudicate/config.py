@@ -14,11 +14,11 @@ class Settings(BaseSettings):
         env_file=REPO_ROOT / ".env", env_prefix="ADJUDICATE_", extra="ignore"
     )
 
-    owner_dsn: str = "postgresql://adjudicate_owner:owner_dev_pw@localhost:55432/adjudicate"
-    admin_dsn: str = "postgresql://adjudicate_admin:admin_dev_pw@localhost:55432/adjudicate"
-    app_dsn: str = "postgresql://adjudicate_app:app_dev_pw@localhost:55432/adjudicate"
+    owner_dsn: str = "postgresql://adjudicate_owner:owner_dev_pw@localhost:55491/adjudicate"
+    admin_dsn: str = "postgresql://adjudicate_admin:admin_dev_pw@localhost:55491/adjudicate"
+    app_dsn: str = "postgresql://adjudicate_app:app_dev_pw@localhost:55491/adjudicate"
     checkpoint_dsn: str = (
-        "postgresql://adjudicate_checkpoint:checkpoint_dev_pw@localhost:55432/adjudicate"
+        "postgresql://adjudicate_checkpoint:checkpoint_dev_pw@localhost:55491/adjudicate"
     )
     token_secret: str = Field(default="dev-only-secret-change-me-at-least-32-bytes", min_length=32)
     token_ttl_seconds: int = 300
@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     fast_model: str = "claude-haiku-5-5"
 
     auto_finalise_rejections: bool = False
+    follow_up_enabled: bool = True
     world_seed: int = 20260101
 
 

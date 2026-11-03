@@ -13,7 +13,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres_dev_pw
           POSTGRES_DB: adjudicate
-        ports: ["55432:5432"]
+        ports: ["55491:5432"]
         options: >-
           --health-cmd "pg_isready -h 127.0.0.1 -U postgres"
           --health-interval 3s --health-timeout 3s --health-retries 30
@@ -26,7 +26,7 @@ jobs:
         with:
           version: "0.11.23"
       - run: uv sync --frozen
-      - run: psql "postgresql://postgres:postgres_dev_pw@localhost:55432/adjudicate" -f db/init/01-roles.sql
+      - run: psql "postgresql://postgres:postgres_dev_pw@localhost:55491/adjudicate" -f db/init/01-roles.sql
       - run: uv run poe seed --accounts 2
       - run: uv run python -m evals.runner --llm anthropic --budget-usd 10
       - run: uv run python -m evals.gate "$(ls -td evals/results/*/ | head -1)"

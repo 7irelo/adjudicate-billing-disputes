@@ -6,10 +6,10 @@ import psycopg
 import pytest
 
 SUPER = os.environ.get(
-    "ADJUDICATE_SUPER_DSN", "postgresql://postgres:postgres_dev_pw@localhost:55432/postgres"
+    "ADJUDICATE_SUPER_DSN", "postgresql://postgres:postgres_dev_pw@localhost:55491/postgres"
 )
 TEST_DB = os.environ.get("ADJUDICATE_TEST_DB", "adjudicate_test")
-HOST = "localhost:55432"
+HOST = "localhost:55491"
 os.environ.setdefault("ADJUDICATE_TOKEN_SECRET", "test-secret-test-secret-test-secret-123")
 
 
