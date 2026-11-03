@@ -1,0 +1,10 @@
+.git
+.venv
+.env
+models
+evals/results
+corpus/raw
+docs
+tests
+notebooks
+**/__pycache__
