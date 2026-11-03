@@ -33,7 +33,12 @@ def span(name: str, state: Mapping[str, Any] | None = None) -> Iterator[None]:
     observation = None
     try:
         metadata = {k: state.get(k) for k in ("tenant_id", "dispute_id")} if state else {}
-        observation = client.start_observation(name=name, as_type="span", metadata=metadata)
+        dispute = metadata.get("dispute_id")
+        # A trace ID seeded from the dispute keeps nodes together, even across a resume.
+        context = {"trace_id": client.create_trace_id(seed=dispute)} if dispute else None
+        observation = client.start_observation(
+            trace_context=context, name=name, as_type="span", metadata=metadata
+        )
     except Exception:
         log.warning("failed to open span %s", name, exc_info=True)
     try:
@@ -53,3 +58,63 @@ def flush() -> None:
             client.flush()
         except Exception:
             log.warning("failed to flush traces", exc_info=True)
+
+
+def trace_id_for(dispute_id: str) -> str | None:
+    client = _client()
+    if client is None:
+        return None
+    try:
+        return client.create_trace_id(seed=dispute_id)
+    except Exception:
+        log.warning("failed to derive a trace ID", exc_info=True)
+        return None
+
+
+def record_generation(
+    dispute_id: str,
+    tenant_id: str,
+    usage: Mapping[str, Any],
+    cost_usd: float,
+    prompt_hash: str,
+) -> None:
+    """One LLM call, with token counts and a cost computed from recorded usage."""
+    client = _client()
+    if client is None:
+        return
+    try:
+        generation = client.start_observation(
+            trace_context={"trace_id": client.create_trace_id(seed=dispute_id)},
+            name="decide.llm",
+            as_type="generation",
+            model=usage.get("served_model"),
+            metadata={
+                "tenant_id": tenant_id,
+                "prompt_hash": prompt_hash,
+                "requested_model": usage.get("requested_model"),
+                "stop_reason": usage.get("stop_reason"),
+            },
+            usage_details={
+                "input": usage.get("input_tokens", 0),
+                "output": usage.get("output_tokens", 0),
+                "cache_read_input_tokens": usage.get("cache_read_tokens", 0),
+                "cache_creation_input_tokens": usage.get("cache_write_tokens", 0),
+            },
+            cost_details={"total": cost_usd},
+        )
+        generation.end()
+    except Exception:
+        log.warning("failed to record a generation", exc_info=True)
+
+
+def push_score(dispute_id: str, name: str, value: float) -> None:
+    """Attach a grader result to a trace, so a failing eval case links straight to it."""
+    client = _client()
+    if client is None:
+        return
+    try:
+        client.create_score(
+            name=name, value=value, trace_id=client.create_trace_id(seed=dispute_id)
+        )
+    except Exception:
+        log.warning("failed to push score %s", name, exc_info=True)
