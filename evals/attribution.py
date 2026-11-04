@@ -55,3 +55,27 @@ def _credit_layer(grade: dict) -> str:
     if grade["predicted"] != "credit_due":
         return "credit:wrong_eligibility"
     return "credit:scope_or_calculator"
+
+
+if __name__ == "__main__":
+    import argparse
+    import json
+    from pathlib import Path
+
+    from adjudicate.llm import AnthropicLLM
+    from evals.runner import load_cases
+
+    parser = argparse.ArgumentParser(description="Paid: three more runs per failed case.")
+    parser.add_argument("run_dir", type=Path)
+    parser.add_argument("--split", default="dev")
+    args = parser.parse_args()
+    text = (args.run_dir / "results.jsonl").read_text("utf-8")
+    rows = {r["case_id"]: r for r in map(json.loads, text.splitlines())}
+    cases = {c["case_id"]: c for c in load_cases(args.split)}
+    failed = [c for c, r in rows.items() if not passed(r["grade"])]
+    pool = TenantPool()
+    results = [
+        attribute(cases[c], AnthropicLLM(), pool, f"attr{i}", rows[c]) for i, c in enumerate(failed)
+    ]
+    (args.run_dir / "attribution.json").write_text(json.dumps(results, indent=1), "utf-8")
+    print(json.dumps(results, indent=1))

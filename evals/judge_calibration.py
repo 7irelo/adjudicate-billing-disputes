@@ -78,9 +78,12 @@ if __name__ == "__main__":
     parser.add_argument("run_dir", type=Path)
     parser.add_argument("--labels", type=Path, default=Path("data/judge/labels.jsonl"))
     args = parser.parse_args()
-    if not args.labels.exists():
-        raise SystemExit(f"{args.labels} doesn't exist. A person must label claims first.")
-    labels = [json.loads(x) for x in args.labels.read_text("utf-8").splitlines() if x]
+    # Without labels there's no agreement figure, but mutants and scores still tell us something.
+    labels = (
+        [json.loads(x) for x in args.labels.read_text("utf-8").splitlines() if x]
+        if args.labels.exists()
+        else []
+    )
     rows = [
         json.loads(x)
         for x in (args.run_dir / "judge_inputs.jsonl").read_text("utf-8").splitlines()
@@ -98,9 +101,21 @@ if __name__ == "__main__":
         )
         cost += spent
         judged[row["case_id"]] = [c.model_dump() for c in verdict.claims]
-    human, judge_labels = match_labels(labels, judged)
+    scores = [
+        sum(c["verdict"] == "supported" for c in claims) / len(claims) if claims else 0.0
+        for claims in judged.values()
+    ]
+    agreement: dict | str = "No human labels yet, so the judge is advisory and can't gate CI."
+    if labels:
+        human, judge_labels = match_labels(labels, judged)
+        agreement = agreement_report(human, judge_labels)
     report = {
-        "agreement": agreement_report(human, judge_labels),
+        "agreement": agreement,
+        "decisions_judged": len(scores),
+        "mean_faithfulness": round(sum(scores) / len(scores), 3) if scores else None,
+        "below_one": [
+            c for c, claims in judged.items() if any(x["verdict"] != "supported" for x in claims)
+        ],
         "mutants": mutant_detection(client, rows[:10]),
         "judge_cost_usd": round(cost, 4),
     }
