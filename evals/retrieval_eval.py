@@ -183,7 +183,8 @@ def main() -> None:
     if set(modes) & {"dense", "hybrid", "rerank"}:
         from adjudicate.retrieval.models import BgeEmbedder, BgeReranker
 
-        embedder, reranker = BgeEmbedder(), BgeReranker()
+        embedder = BgeEmbedder()
+        reranker = BgeReranker() if "rerank" in modes else None
     qrels = load_qrels(args.split)
     spans = clause_spans()
     pool = TenantPool()

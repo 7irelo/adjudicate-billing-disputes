@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import yaml
 
 from adjudicate.config import REPO_ROOT
@@ -52,10 +53,20 @@ def gold_spans(doc, qrels: list[dict]) -> dict[str, tuple[str, int, int]]:
     return spans
 
 
-def run(doc, qrels: list[dict]) -> list[dict[str, Any]]:
+def dense_rank(embedder, chunks: list, query: str, cache: dict) -> list[str]:
+    """Exact cosine in memory: nothing here goes near a tenant's database."""
+    key = chunks[0].strategy if chunks else ""
+    if key not in cache:
+        cache[key] = np.array(embedder.encode_many([c.match_text for c in chunks]))
+    scores = cache[key] @ np.array(embedder.encode_query(query))
+    return [chunks[int(i)].chunk_id for i in np.argsort(-scores)[:CANDIDATES]]
+
+
+def run(doc, qrels: list[dict], embedder=None) -> list[dict[str, Any]]:
     spans = gold_spans(doc, qrels)
     relevant = [q for q in qrels if q["document"] == doc.document_id]
     rows = []
+    vectors: dict = {}
     for strategy in STRATEGIES:
         chunks = chunk_document(doc, strategy)
         index = Bm25Index([c.chunk_id for c in chunks], [c.match_text for c in chunks])
@@ -75,13 +86,18 @@ def run(doc, qrels: list[dict]) -> list[dict[str, Any]]:
         per_query = []
         for q in relevant:
             gold = [f"{q['qid']}#{i}" for i in range(len(q["gold_snippets"]))]
-            hits = [by_id[h.chunk_id] for h in index.search(q["query"], CANDIDATES)]
+            if embedder is None:
+                ids = [h.chunk_id for h in index.search(q["query"], CANDIDATES)]
+            else:
+                ids = dense_rank(embedder, chunks, q["query"], vectors)
+            hits = [by_id[i] for i in ids]
             scores = score_query(gold_ranks(hits, gold, spans), gold)
             scores["context_tokens@5"] = sum(len(h["text"].split()) for h in hits[:5])
             per_query.append(scores)
         summary: dict[str, Any] = {
             "document": doc.document_id,
             "strategy": strategy,
+            "mode": "dense" if embedder else "bm25",
             "chunks": len(chunks),
             "n": len(per_query),
         }
@@ -97,16 +113,22 @@ def main() -> None:
     parser.add_argument(
         "--out", type=Path, default=REPO_ROOT / "evals/results/summaries/real_benchmark.json"
     )
+    parser.add_argument("--dense", action="store_true", help="BGE-M3, needs the ml extra")
     args = parser.parse_args()
     qrels = [json.loads(x) for x in QRELS.read_text("utf-8").splitlines() if x.strip()]
     documents = load_documents()
     if not documents:
         raise SystemExit("No PDFs in corpus/raw. Run: python -m adjudicate.ingest.fetch")
     checks = [parse_check(d) for d in documents]
+    embedder = None
+    if args.dense:
+        from adjudicate.retrieval.models import BgeEmbedder
+
+        embedder = BgeEmbedder()
     results = []
     for doc in documents:
         if any(q["document"] == doc.document_id for q in qrels):
-            results.extend(run(doc, qrels))
+            results.extend(run(doc, qrels, embedder))
     print(
         f"{'doc/strategy':<30}{'chunks':>7}{'R@1':>7}{'R@5':>7}{'MRR':>7}{'ctx@5':>7}  R@5 95% CI"
     )
