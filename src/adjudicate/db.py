@@ -4,7 +4,7 @@ import argparse
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import psycopg
 from psycopg.rows import dict_row
@@ -13,7 +13,7 @@ from psycopg_pool import ConnectionPool
 from adjudicate.config import REPO_ROOT, get_settings
 
 MIGRATIONS = REPO_ROOT / "db" / "migrations"
-DictConnection = psycopg.Connection[dict[str, Any]]
+DictConnection: TypeAlias = psycopg.Connection[dict[str, Any]]  # noqa: UP040
 
 
 def migrate(dsn: str | None = None, migrations_dir: Path = MIGRATIONS) -> list[str]:

@@ -77,6 +77,8 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Header"]
 include = ["src", "evals", "scripts"]
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"
 # torch, transformers, onnxruntime and gradio are optional extras.
 reportMissingImports = "warning"
 # DisputeState is total=False because nodes return partial updates; the graph order guarantees keys.

@@ -10,8 +10,8 @@
 | M1 Foundation and world | Done | **Met.** The isolation suite passes and goes red on all 7 mutations. |
 | M2 Documents and ingestion | Done. Tenant terms are Markdown, not PDFs. | Clauses load and rule bindings pass. Real PDFs parse, and the parse check found a real bug (F-006). A person should still read 30 clauses per document. |
 | M3 Skeleton and harness | Done | **Met.** Real decisions cite both clauses and records, and code verifies them. |
-| M4 Retrieval | Done | **Partly met.** BM25 is measured on 100 draft queries and two real documents. Dense and rerank **have not run**: the embedding job was stopped by Windows running low on memory. |
-| M5 Classifier | Done | **Not met.** About 3,300 rows are generated, and LLM arms have run on draft text. No human test set, no hand-check, no trained encoder. The encoder path has **not been run end to end**: its smoke test was stopped by the same memory shortage. |
+| M4 Retrieval | Done | **Met on draft labels.** BM25, dense and hybrid across all five strategies, rerank on the leader, a test split scored once, and two real documents. Needs your labels to be reportable. |
+| M5 Classifier | Done | **Not met.** About 3,300 rows are generated, and LLM arms have run on draft text. No human test set, no hand-check, no trained encoder. The encoder path passes end to end on a tiny random model: training, temperature scaling, ONNX export, int8 quantisation and serving. |
 | M6 Agent, credit, fraud, MCP | Done | **Met** in-process with a real model, including the brief's two examples. The real-model path over HTTP MCP hasn't run. |
 | M7 Evals complete | Done | **Not met.** All 150 cases exist, but as drafts. The judge has never run, since the API credit ran out first. The sweep and held-out runs haven't run either. |
 | M8 Observability and CI | Done | See the CI section below. Langfuse is tested against a fake client, never a real account. |
@@ -76,31 +76,43 @@ These describe plumbing, on assistant-drafted labels. **None may be quoted as a 
 | Constant model | Fails the gate |
 | Fraud screen, synthetic, report seed 23 | Flag rate 100% on PBX burst, IRSF and Wangiri; 0% on low-and-slow, which is built to evade; 0% false escalation on three legitimate twins |
 
-### Retrieval, BM25 only
+### Retrieval
 
-Authored documents, 60 dev queries:
+Authored documents, 60 draft dev queries, recall@5:
 
-| Strategy | Recall@5 | 95% CI | Context tokens @5 |
+| Strategy | BM25 | Dense | Hybrid | Context tokens @5 (dense) |
+|---|---:|---:|---:|---:|
+| A fixed 512 | 0.983 | 1.0 | 1.0 | 634 |
+| B paragraphs | 0.908 | 1.0 | 1.0 | 521 |
+| C clause | 0.850 | 0.992 | 0.967 | 111 |
+| D clause + path | 0.858 | 0.975 | 0.975 | 142 |
+| E small-to-big | 0.858 | 0.975 | 0.975 | 348 |
+
+Strategy D with rewriting, recall@5:
+
+| Mode | Recall@5 | 95% CI | p50 per query (i7-1355U) |
 |---|---:|---|---:|
-| A fixed 512 | 0.983 | 0.95 to 1.0 | 588 |
-| B paragraphs | 0.908 | 0.833 to 0.975 | 363 |
-| C clause | 0.850 | 0.758 to 0.925 | 86 |
-| D clause + path | 0.858 | 0.767 to 0.933 | 109 |
-| E small-to-big | 0.858 | 0.767 to 0.933 | 270 |
-| D + query rewriting | 0.942 | 0.875 to 0.992 | 117 |
+| BM25 | 0.942 | 0.875 to 0.992 | 27 ms |
+| Hybrid | 0.992 | 0.975 to 1.0 | 343 ms |
+| Hybrid + rerank | 1.0 | 1.0 to 1.0 | 11.0 s |
+| Hybrid, on 40 test queries, scored once | 0.963 | 0.90 to 1.0 | 279 ms |
+| BM25, on 40 test queries, scored once | 0.912 | 0.825 to 0.988 | 34 ms |
 
 - A's recall is an artefact. These documents barely exceed one 512-token window, so a chunk is nearly the whole document (F-004).
-- Rewriting added 0.083 recall@5 to D (paired 95% CI 0.025 to 0.158), so serving uses D with rewriting. Scored once on 40 test queries: 0.912 (CI 0.825 to 0.988). The same author wrote the rewrite list and the queries, which flatters it.
-- D against C: +0.008 (paired CI 0.0 to 0.025). The section path shows no clear benefit.
+- Rewriting added 0.083 recall@5 to BM25 on D (paired 95% CI 0.025 to 0.158). The same author wrote the rewrite list and the queries, which flatters it.
+- D against C on BM25: +0.008 (paired CI 0.0 to 0.025). The section path shows no clear benefit.
+- **Serving stays on BM25 with rewriting.** Dense would need torch and a 4 GB model in the demo image, for a gain that doesn't carry over to real documents. Reranking at 11 s per query on this CPU isn't viable.
 
-Real documents, 25 queries, no rewriting:
+Real documents, 25 queries, recall@5, no rewriting:
 
-| Document | A | B | C | D | E |
-|---|---:|---:|---:|---:|---:|
-| Gazette 53991 (R@5, 14 queries) | 0.714 | 0.714 | 0.571 | 0.571 | 0.571 |
-| Cell C charter (R@5, 11 queries) | 1.0 | 0.909 | 0.818 | 0.818 | 0.818 |
+| Document | Mode | A | B | C | D | E |
+|---|---|---:|---:|---:|---:|---:|
+| Gazette 53991 (14 queries) | BM25 | 0.714 | 0.714 | 0.571 | 0.571 | 0.571 |
+| | Dense | 0.5 | 0.643 | 0.5 | 0.5 | 0.5 |
+| Cell C charter (11 queries) | BM25 | 1.0 | 0.909 | 0.818 | 0.818 | 0.818 |
+| | Dense | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 |
 
-**Clause-aware chunking did not win on real documents.** The intervals overlap, so this is inconclusive, but the plan's expected winner has no support here. Clause chunks do cost far less context on the gazette: 312 tokens against 2,531 for A.
+**This is the plan's self-authored-world threat, measured.** Dense reached about 0.98 on authored documents but only 0.5 to 0.64 on the long gazette, where BM25 did at least as well. Clause-aware chunking didn't win on real documents either. Intervals are wide (about 0.2 to 0.8 on the gazette), so both are inconclusive, but neither expected winner has support. Clause chunks do cost far less context on the gazette: about 310 tokens against about 2,500 for A.
 
 ## CI
 
@@ -118,24 +130,17 @@ The plan asks for red builds on deliberate regression branches. That's still ope
 
 ## Last checked
 
-The final commit: 522 tests pass (encoder smoke left out), `ruff` and `pyright` clean, 7 of 7 mutations caught, oracle gate passes on 100 dev and 50 held-out cases, constant model fails. With records hidden, oracle record recall falls to about 3%, so the record pipeline does carry the evidence.
+A fresh clone with locked default dependencies, on a private Postgres: 522 tests pass (encoder smoke skipped, as it is in CI), lint clean, oracle gate passes. In the main checkout: 7 of 7 mutations caught, and the encoder smoke test passes with the `ml` extra. With records hidden, oracle record recall falls to about 3%.
 
-**The Docker stack hasn't been rebuilt since the follow-up loop, rewriting and calibrator went in,** and the fresh-clone test didn't finish: Windows ran low on memory and Claude Code stopped it, with no result either way. Rerun with plenty of memory free: clone the repo, then `docker compose up --build`.
+**`docker compose up` hasn't run on the final code.** The last clean-start pass predates the follow-up loop, rewriting and the calibrator. The fresh-clone Docker test was stopped by low memory, and Docker Desktop's engine has been hung since, so it needs a restart. The port also moved to 55491.
 
 ## API key status
 
 Paid runs used `ANTHROPIC_API_KEY` from `C:\Dev\aptiverse\.env`, as the owner asked. Total spend was about $6.30, and **that key's account is now out of credit, so anything else using it will fail until it's topped up.** The key in `aptiverse/api/.env` needs an `anthropic-workspace-id` header, so it wasn't used. No key was written to this repo.
 
-## What was stopped
+## Docker
 
-Windows ran low on memory, so Claude Code stopped three background jobs, and they weren't restarted. Docker Desktop's engine also stopped responding, so the real runs used a private Postgres with pgvector in a scratch folder. Restart Docker Desktop, close other work, then run:
-
-```bash
-uv sync --all-extras
-uv run poe embed            # downloads about 4 GB of BGE-M3, partly cached already
-uv run python -m evals.retrieval_eval --split dev --modes bm25,dense,hybrid,rerank
-uv run pytest tests/integration/test_encoder_smoke.py
-```
+Docker Desktop's engine stopped responding during this work and wasn't restarted, because other projects use it. Restart it, close other heavy work, then run from a fresh clone: `docker compose up --build`.
 
 ## What only you can do
 
@@ -143,7 +148,7 @@ uv run pytest tests/integration/test_encoder_smoke.py
 2. **Write `data/classifier/test_human.jsonl`,** about 300 disputes in your own words, before training anything.
 3. **Re-derive the gold labels.** All 150 golden cases, all 125 retrieval queries and the worked credits are AI drafts, marked `assistant_draft` where the format allows. `meta.reportable` stays false until they're `hand_written`, and README tables stay empty until then.
 4. **Review the fictional T&Cs,** and decide whether "Baobab" is too close to Bayobab.
-5. **Train the encoders** on a hosted GPU, using `notebooks/train_encoder.ipynb`, after `python -m adjudicate.classify.synth`.
+5. **Train the encoders** on a hosted GPU, using `notebooks/train_encoder.ipynb`, after writing the human test set. Training data is already generated.
 6. **Hand-label about 60 decisions** in `data/judge/labels.jsonl`, before looking at judge output.
 7. **Re-label 30 cases** at least a week later, for intra-rater agreement.
 8. **Record the demo video,** following `docs/demo-script.md`, and work through real failures once a model has run.
