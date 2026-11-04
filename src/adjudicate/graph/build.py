@@ -331,12 +331,21 @@ def build_graph(tools: Tools, llm: LLM, settings: Settings | None = None, checkp
     def verify(state: DisputeState) -> dict:
         if state.get("decision") is None:
             return {"verify_errors": []}
+        policy = load_policy(state["tenant_id"])
+        on = date.fromisoformat(state["period_start"])
         errors = verify_decision(
             Decision.model_validate(state["decision"]),
             [Clause.model_validate(c) for c in state.get("clauses", [])],
             [EvidenceSet.model_validate(e) for e in state.get("evidence", [])],
-            load_policy(state["tenant_id"]),
-            date.fromisoformat(state["period_start"]),
+            policy,
+            on,
+            context=[
+                state["dispute_date"],
+                state["period_start"],
+                state["period_end"],
+                state["text"],
+                *(str(rule.dispute_window_days) for rule in policy.rules_on(on)),
+            ],
         )
         return {"verify_errors": errors, "repairs": state.get("repairs", 0)}
 

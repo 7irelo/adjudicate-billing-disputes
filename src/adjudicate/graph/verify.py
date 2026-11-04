@@ -5,6 +5,7 @@ A failure sends the decision back for one repair attempt, and then to a human.
 
 import json
 import re
+from collections.abc import Sequence
 from datetime import date
 
 from adjudicate.credit.money import rand
@@ -25,10 +26,17 @@ def _digits(token: str) -> str:
     return token.replace("R", "").replace(",", "").replace(" ", "").strip()
 
 
-def allowed_numbers(clauses: list[Clause], evidence: list[EvidenceSet]) -> set[str]:
-    """Every number the rationale may state: what tools returned or what a clause says."""
+def allowed_numbers(
+    clauses: list[Clause], evidence: list[EvidenceSet], context: Sequence[str] = ()
+) -> set[str]:
+    """Every number the rationale may state: from tools, clauses, or what the prompt supplied.
+
+    `context` covers the dispute date, the period, rule windows and the customer's own text. A
+    rationale may say "you claimed R1,200". It still can't reach a customer as a credit amount,
+    because that figure comes from a template.
+    """
     allowed: set[str] = set()
-    corpus = [c.text for c in clauses] + [c.clause_id for c in clauses]
+    corpus = [c.text for c in clauses] + [c.clause_id for c in clauses] + list(context)
     for ev in evidence:
         blob = json.dumps(ev.for_model(), default=str)
         corpus.append(blob)
@@ -45,8 +53,13 @@ def allowed_numbers(clauses: list[Clause], evidence: list[EvidenceSet]) -> set[s
     return allowed
 
 
-def audit_numbers(rationale: str, clauses: list[Clause], evidence: list[EvidenceSet]) -> list[str]:
-    allowed = allowed_numbers(clauses, evidence)
+def audit_numbers(
+    rationale: str,
+    clauses: list[Clause],
+    evidence: list[EvidenceSet],
+    context: Sequence[str] = (),
+) -> list[str]:
+    allowed = allowed_numbers(clauses, evidence, context)
     bad = []
     for token in _NUMBER.findall(rationale):
         value = _digits(token).rstrip(".")
@@ -61,6 +74,7 @@ def verify_decision(
     evidence: list[EvidenceSet],
     policy: TenantPolicy,
     as_of: date,
+    context: Sequence[str] = (),
 ) -> list[str]:
     """Return a list of problems. Empty means every check passed."""
     errors: list[str] = []
@@ -103,7 +117,7 @@ def verify_decision(
     elif decision.credit_rule_id:
         errors.append(f"{decision.decision} must not name a credit rule")
 
-    unsupported = audit_numbers(decision.rationale, clauses, evidence)
+    unsupported = audit_numbers(decision.rationale, clauses, evidence, context)
     if unsupported:
         errors.append(f"rationale states numbers not found in tool output: {unsupported}")
     return errors

@@ -122,6 +122,19 @@ def test_number_audit_catches_a_made_up_amount() -> None:
     assert audit_numbers("Two lines totalling R398.00.", [CLAUSE], [EVIDENCE]) == []
 
 
+def test_number_audit_accepts_what_the_prompt_supplied() -> None:
+    """F-007: the dispute date's day was rejected as an invented number."""
+    text = "The 2026-06-20 claim falls inside the 30 day window, and you claimed R1,200."
+    assert audit_numbers(text, [CLAUSE], [EVIDENCE]) != []
+    context = ["2026-06-20", "30", "I was billed R1,200"]
+    assert audit_numbers(text, [CLAUSE], [EVIDENCE], context) == []
+
+
+def test_number_audit_still_rejects_a_number_from_nowhere() -> None:
+    context = ["2026-06-20", "30", "I was billed R1,200"]
+    assert audit_numbers("We owe you R777.00.", [CLAUSE], [EVIDENCE], context) == ["R777.00"]
+
+
 def test_contiguous_range_only_when_true() -> None:
     assert contiguous_range(["CDR-1", "CDR-2", "CDR-3"]) == "CDR-1 to CDR-3"
     assert contiguous_range(["CDR-1", "CDR-3"]) is None
