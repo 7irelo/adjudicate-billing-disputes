@@ -1,0 +1,135 @@
+{
+ "meta": {
+  "commit": "228bb8b",
+  "dirty": true,
+  "world_hash": "b7ad1b32d4a6cc21",
+  "corpus_hash": "32799089a8e28ad0",
+  "golden_hash": "6f580f4448b04fb4",
+  "prompt_hash": "07098d134f26",
+  "llm": "anthropic",
+  "decide_model": "claude-opus-5-5",
+  "decide_effort": "high",
+  "started": "2026-11-04T11:33:18",
+  "run_id": "47ae7841",
+  "reps": 1,
+  "cases": 100,
+  "provenance": {
+   "assistant_draft": 100
+  },
+  "reportable": false,
+  "errors": 59,
+  "spent_usd": 1.1563,
+  "budget_stopped": false
+ },
+ "rows": 41,
+ "infra_errors": 59,
+ "infra_error_rate": 0.59,
+ "metrics": {
+  "decision_correct": {
+   "mean": 0.9756,
+   "ci_low": 0.9268,
+   "ci_high": 1.0,
+   "n": 41
+  },
+  "route_correct": {
+   "mean": 1.0,
+   "ci_low": 1.0,
+   "ci_high": 1.0,
+   "n": 41
+  },
+  "clause_precision": {
+   "mean": 0.7378,
+   "ci_low": 0.6683,
+   "ci_high": 0.8065,
+   "n": 41
+  },
+  "clause_recall": {
+   "mean": 1.0,
+   "ci_low": 1.0,
+   "ci_high": 1.0,
+   "n": 41
+  },
+  "record_precision": {
+   "mean": 0.8978,
+   "ci_low": 0.819,
+   "ci_high": 0.9625,
+   "n": 41
+  },
+  "record_recall": {
+   "mean": 1.0,
+   "ci_low": 1.0,
+   "ci_high": 1.0,
+   "n": 41
+  },
+  "credit_exact": {
+   "mean": 1.0,
+   "ci_low": 1.0,
+   "ci_high": 1.0,
+   "n": 41
+  },
+  "verify_passed": {
+   "mean": 1.0,
+   "ci_low": 1.0,
+   "ci_high": 1.0,
+   "n": 41
+  },
+  "type_correct": {
+   "mean": 0.7073,
+   "ci_low": 0.561,
+   "ci_high": 0.8537,
+   "n": 41
+  },
+  "credit_exact_given_eligible": {
+   "mean": 1.0,
+   "ci_low": 1.0,
+   "ci_high": 1.0,
+   "n": 16
+  },
+  "dual_evidence": {
+   "mean": 1.0,
+   "ci_low": 1.0,
+   "ci_high": 1.0,
+   "n": 28
+  }
+ },
+ "macro_f1": 0.9733,
+ "majority_baseline_accuracy": 0.3902,
+ "confusion": {
+  "charge_valid->charge_valid": 12,
+  "charge_valid->needs_review": 1,
+  "credit_due->credit_due": 16,
+  "needs_review->needs_review": 12
+ },
+ "wrongful_credit_rate": 0,
+ "wrongful_rejection_rate": 0,
+ "over_credit_rand": {
+  "total": 0.0,
+  "worst": 0.0
+ },
+ "under_credit_rand": {
+  "total": 0.0,
+  "worst": 0.0
+ },
+ "fraud": {
+  "cases": 12,
+  "escalation_recall": 0.9167,
+  "false_escalation_rate": 0
+ },
+ "auto": {
+  "coverage": 0.3659,
+  "precision": 1
+ },
+ "llm_failures": {},
+ "zero_tolerance": [],
+ "cost_usd": 1.1563,
+ "latency_ms": {
+  "p50": 9190,
+  "p95": 17399
+ },
+ "served_models": {
+  "claude-opus-5-5": 30
+ },
+ "failed_cases": [
+  "G-0006"
+ ]
+}
