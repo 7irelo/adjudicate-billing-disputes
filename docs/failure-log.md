@@ -117,3 +117,37 @@ Rejected fixes: Requiring a dotted clause number, which would drop top-level cla
 Regression test: `test_footnotes_are_not_clauses`.
 
 What it taught me: This is the plan's self-authored-world threat in miniature. My own documents could never have produced this bug, and the first real one did on its first read.
+
+## F-007: The number audit rejected numbers the prompt had supplied
+
+Found: 2026-11-04, the first full dev run on `claude-opus-5-5` (run `616b6863`, 100 draft cases, $4.42).
+
+Symptom: 38 of 100 cases needed a repair call, which is 38 extra paid calls. G-0009 still failed after repair, with `rationale states numbers not found in tool output: ['20']`, so a R2,320.00 credit went uncomputed. It went to human review, as designed.
+
+Layer: citation (`verify`).
+
+Root cause: The audit allowed numbers from tool output and clauses only. The "20" was the day in `2026-06-20`, the dispute date, which the prompt gave the model but no tool returned. The customer's own figures and rule windows were rejected in the same way.
+
+Fix: `verify_decision` takes the prompt's context: dispute date, period, rule windows and dispute text.
+
+Rejected fixes: Dropping the audit, because a made-up number must still fail, and a test now checks that. Telling the model not to mention dates, which treats the symptom and makes rationales worse.
+
+Regression test: `test_number_audit_accepts_what_the_prompt_supplied` and `test_number_audit_still_rejects_a_number_from_nowhere`.
+
+Before / after: Repairs went from 38 in 100 cases to 4 in 41 (a partial rerun, `47ae7841`, because the API credit ran out). G-0009 now gets its R2,320.00 credit. The rerun covers the first 41 cases only, so it isn't a like-for-like accuracy comparison.
+
+What it taught me: This failure mode was invisible to the scripted oracle, whose rationale contains no numbers. Only a real model showed that the check meant to catch invented numbers was punishing accurate ones.
+
+## F-008: Nine disagreements that are really about the labels, left unresolved
+
+Found: 2026-11-04, the same run.
+
+Symptom: G-0041 to G-0046 (consent granted mid-period): gold says `needs_review`, the model says `credit_due`. G-0006, G-0054 and G-0055 (duplicates out of window): gold says `charge_valid`, the model says `needs_review`.
+
+Layer: label.
+
+Root cause: Both readings are defensible. On partial consent, clause 3.1 needs an opt-in "active for the whole service period", which the model reasonably reads as failing, while clause 3.2 only reverses a charge "with no active opt-in". The calculator raises `AmbiguousFacts`, so no money moved and all six went to a person. On late duplicates, clause 2.2 refuses a credit but mentions a manual review, which the model chose.
+
+Fix: None. The plan says never to use model output as gold, so these need the owner's ruling, or clearer T&Cs. The labels and clauses are unchanged.
+
+What it taught me: The safety layers held even where the labels are arguable. Decision accuracy on these cases measures my drafting as much as the model.

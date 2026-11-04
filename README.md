@@ -6,7 +6,7 @@ All operators, customers and records are fictional. This is a portfolio project,
 
 ## Status
 
-**In progress. There are no model results yet.** The system runs end to end with a scripted model, and its deterministic parts are tested. Decision quality hasn't been measured, because that needs an API key and owner-reviewed labels. See [`docs/PROGRESS.md`](docs/PROGRESS.md).
+**In progress.** The system runs end to end on a real model, and its deterministic parts are tested. There are no reportable results yet, because every label is still an unreviewed draft. See [`docs/PROGRESS.md`](docs/PROGRESS.md).
 
 ## Results
 
