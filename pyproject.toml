@@ -28,7 +28,15 @@ dependencies = [
 [project.optional-dependencies]
 ui = ["gradio>=6"]
 ingest = ["pdfplumber>=0.11"]
-ml = ["sentence-transformers>=6", "transformers>=5", "torch>=2.5", "onnxruntime>=1.20", "accelerate>=1.0"]
+ml = [
+    "sentence-transformers>=6",
+    "transformers>=5",
+    "torch>=2.5",
+    "onnxruntime>=1.20",
+    "accelerate>=1.0",
+    "onnx>=1.23.2",
+    "onnxscript>=0.7.2",
+]
 
 [dependency-groups]
 dev = [

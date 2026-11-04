@@ -31,6 +31,7 @@ def export(model_name: str, checkpoint: Path, out: Path, temperature: float) -> 
             "attention_mask": {0: "batch", 1: "tokens"},
         },
         opset_version=17,
+        dynamo=False,  # the new exporter produces graphs that int8 quantisation rejects
     )
     quantised = out / "model.int8.onnx"
     quantize_dynamic(raw, quantised, weight_type=QuantType.QInt8)
