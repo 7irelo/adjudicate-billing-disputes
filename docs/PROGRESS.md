@@ -16,7 +16,7 @@
 | M7 Evals complete | Done | **Not met.** All 150 cases exist, but as drafts. The judge has never run, since the API credit ran out first. The sweep and held-out runs haven't run either. |
 | M8 Observability and CI | Done | See the CI section below. Langfuse is tested against a fake client, never a real account. |
 | M9 Serving | Done | Clean start from empty volumes tested with no API key: seed, MCP, API, fraud queue, tenant 404s, review surviving an app restart, demo page. Never run with a real model. |
-| M10 Release | README, ADRs, cards, failure log, generated tables | **Not met.** One fix cycle done on real failures (F-007, F-008). No reportable results, no demo video. `docs/demo-script.md` has the steps. |
+| M10 Release | README, ADRs, cards, failure log, generated tables | **Not met.** README sections are all written, including failure analyses tied to commits and a provisional encoder rule. One fix cycle done on real failures (F-007, F-008). No reportable results, no demo video. `docs/demo-script.md` has the steps. |
 
 ## Real model runs, on draft labels
 
@@ -161,6 +161,6 @@ Docker Desktop's engine stopped responding during this work and wasn't restarted
 | Tenant T&Cs as PDFs | Markdown | Real-PDF parsing is tested on real documents instead, which is the harder test. |
 | Docling for parsing | pdfplumber | Docling's model stack is heavy for two documents. See `ingest/parse.py`. |
 | Fallbacks on, flagged in evals | Fallbacks not requested; a different served model routes to review | Simpler, and it needs a real run to test the beta. |
-| Break-even chart | `evals/breakeven.py` gives a table | There are no measured costs to chart yet. |
+| Break-even chart | `evals/breakeven.py` gives a table, in the README from measured LLM costs | The encoder isn't trained, so the rule is provisional and a table is enough. |
 | Regulation vs T&Cs golden family | Not included | Regulation 8A takes effect in 2027, after this synthetic world. See `m0-findings.md`. |
 | Intake-encoder type agreement feature | Classifier top-2 margin | Intake has no LLM type to compare with. |
