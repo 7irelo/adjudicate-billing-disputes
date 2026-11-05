@@ -116,7 +116,7 @@ Real documents, 25 queries, recall@5, no rewriting:
 
 ## CI
 
-**The workflows have never run,** because nothing has been pushed. The free job runs lint, types, tests, the mutation check, the oracle and constant gates, and BM25 retrieval. The paid smoke and nightly jobs need an `ANTHROPIC_API_KEY` secret.
+**The free job passes on GitHub,** on its first run at `db49910` (run 42015886484). It runs lint, types, tests, the mutation check, the oracle and constant gates, and BM25 retrieval. The paid smoke and nightly jobs need an `ANTHROPIC_API_KEY` secret, and have not run.
 
 The plan asks for red builds on deliberate regression branches. That's still open. The same breakages were tested locally in a throwaway clone instead, and each one failed:
 
@@ -144,7 +144,7 @@ Docker Desktop's engine stopped responding during this work and wasn't restarted
 
 ## What only you can do
 
-1. **Top up API credit,** then finish the paid work: `evals.runner --llm anthropic` on dev, `evals.judge_calibration`, `evals.attribution`, `evals.sweep`, `evals.calibrate`, and held-out once your labels exist. About $15 (est.).
+1. **Paid runs, on hold by the owner's choice to avoid the cost.** To finish them, top up API credit, then run: `evals.runner --llm anthropic` on dev, `evals.judge_calibration`, `evals.attribution`, `evals.sweep`, `evals.calibrate`, and held-out once your labels exist. About $15 (est.).
 2. **Write `data/classifier/test_human.jsonl`,** about 300 disputes in your own words, before training anything.
 3. **Re-derive the gold labels.** All 150 golden cases, all 125 retrieval queries and the worked credits are AI drafts, marked `assistant_draft` where the format allows. `meta.reportable` stays false until they're `hand_written`, and README tables stay empty until then.
 4. **Review the fictional T&Cs,** and decide whether "Baobab" is too close to Bayobab.
